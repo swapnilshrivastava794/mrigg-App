@@ -2,30 +2,30 @@ import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  Sparkles,
+    ArrowRight,
+    Eye,
+    EyeOff,
+    Lock,
+    Mail,
+    Sparkles,
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
-import { login } from "../server";
+import { login, saveToken } from "../server";
 
 const { width } = Dimensions.get("window");
 
@@ -36,6 +36,7 @@ export default function SignIn() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const router = useRouter();
+  const { returnUrl } = useLocalSearchParams();
   const { setUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -142,13 +143,16 @@ export default function SignIn() {
         return alert("Invalid email or password. Please try again.");
       }
 
-      await AsyncStorage.setItem("accessToken", access);
-      await AsyncStorage.setItem("refreshToken", refresh);
+      await saveToken(access, refresh);
       await AsyncStorage.setItem("user", JSON.stringify(user));
 
       if (setUser) setUser(user);
 
-      router.replace("/(tabs)");
+      if (returnUrl) {
+        router.replace(returnUrl);
+      } else {
+        router.replace("/(tabs)");
+      }
     } catch (error) {
       console.log("LOGIN ERROR 👉", JSON.stringify(error, null, 2));
       alert("Login failed. Please check your credentials and try again.");

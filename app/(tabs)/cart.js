@@ -1,53 +1,38 @@
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors"; // 💜 GLOBAL COLORS
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useRouter } from "expo-router";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useCart } from "../contexts/CartContext";
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: "1",
-      name: "Cat sports mans shoe",
-      brand: "Rebook",
-      price: 500,
-      qty: 1,
-      image: "/mnt/data/62eda322-de03-48be-a14d-637954863bdb.png",
-    },
-    {
-      id: "2",
-      name: "Nikka sports shoe",
-      brand: "Nikka",
-      price: 450,
-      qty: 2,
-      image: "/mnt/data/62eda322-de03-48be-a14d-637954863bdb.png",
-    },
-  ]);
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { cartItems, removeFromCart, updateQuantity } = useCart();
 
   const increaseQty = (id) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, qty: item.qty + 1 } : item
-      )
-    );
+    updateQuantity(id, 1);
   };
 
   const decreaseQty = (id) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id && item.qty > 1 ? { ...item, qty: item.qty - 1 } : item
-      )
-    );
+    updateQuantity(id, -1);
   };
 
   const removeItem = (id) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+    removeFromCart(id);
   };
 
   const totalAmount = cartItems.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
   );
+
+  const handleCheckout = () => {
+    if (cartItems.length === 0) return;
+    router.push("/checkout/address");
+  };
 
   return (
     <Screen>
@@ -95,16 +80,25 @@ export default function Cart() {
       ))}
 
       {/* Total & Checkout */}
-      <View style={styles.bottomBar}>
-        <View>
-          <Text style={styles.totalTitle}>Total</Text>
-          <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
-        </View>
+      {cartItems.length > 0 && (
+          <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+            <View>
+              <Text style={styles.totalTitle}>Total</Text>
+              <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
+            </View>
 
-        <TouchableOpacity style={styles.checkoutButton}>
-          <Text style={styles.checkoutText}>Checkout</Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
+              <Text style={styles.checkoutText}>Checkout</Text>
+            </TouchableOpacity>
+          </View>
+      )}
+
+      {cartItems.length === 0 && (
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100}}>
+              <Ionicons name="cart-outline" size={64} color={COLORS.grey} />
+              <Text style={{color: COLORS.grey, marginTop: 16}}>Your cart is empty</Text>
+          </View>
+      )}
 
       <View style={{ height: 100 }} />
     </Screen>

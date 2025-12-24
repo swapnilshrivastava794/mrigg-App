@@ -21,6 +21,9 @@ const publicEndpoints = [
 // ----------------------------------------------------------
 // REQUEST INTERCEPTOR → Attach token for protected APIs
 // ----------------------------------------------------------
+// ----------------------------------------------------------
+// REQUEST INTERCEPTOR → Attach token for protected APIs
+// ----------------------------------------------------------
 axiosInstance.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("accessToken");
 
@@ -36,11 +39,49 @@ axiosInstance.interceptors.request.use(async (config) => {
 });
 
 // ----------------------------------------------------------
-// RESPONSE INTERCEPTOR
+// RESPONSE INTERCEPTOR (Auto-Refresh Logic)
 // ----------------------------------------------------------
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    // IF 401 Unauthorized AND NOT already retried
+    const isLoginRequest = originalRequest.url && originalRequest.url.includes("api/auth/login");
+    
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = await AsyncStorage.getItem("refreshToken");
+        if (!refreshToken) {
+            // No refresh token -> Logout
+            await logoutUser();
+            return Promise.reject(error);
+        }
+
+        // Call Refresh API
+        // Adjust endpoint based on your backend: /api/token/refresh/ is common
+        const res = await axios.post(`${constant.appBaseUrl}/api/token/refresh/`, {
+            refresh: refreshToken
+        });
+
+        if (res.data.access) {
+            await saveToken(res.data.access, res.data.refresh || refreshToken);
+            
+            // Retry original request with new token
+            originalRequest.headers["Authorization"] = `Bearer ${res.data.access}`;
+            return axiosInstance(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed -> Logout
+        console.log("❌ REFRESH FAILED:", refreshError?.response?.data || refreshError.message);
+        console.log("Session expired, logging out...");
+        await logoutUser();
+        return Promise.reject(refreshError);
+      }
+    }
+
     console.log("🔥 AXIOS ERROR:", JSON.stringify(error, null, 2));
 
     if (error.response) {
@@ -57,12 +98,16 @@ axiosInstance.interceptors.response.use(
 // ----------------------------------------------------------
 // TOKEN HELPERS
 // ----------------------------------------------------------
-export async function saveToken(token) {
-  await AsyncStorage.setItem("accessToken", token);
+export async function saveToken(accessToken, refreshToken) {
+  await AsyncStorage.setItem("accessToken", accessToken);
+  if (refreshToken) {
+    await AsyncStorage.setItem("refreshToken", refreshToken);
+  }
 }
 
 export async function logoutUser() {
   await AsyncStorage.removeItem("accessToken");
+  await AsyncStorage.removeItem("refreshToken");
 }
 
 // ----------------------------------------------------------
@@ -151,6 +196,41 @@ export const searchProducts = async (query, page = 1, limit = 10) => {
   const res = await axiosInstance.get("/api/products/search/", {
     params: { q: query, page, limit },
   });
+  return res.data;
+};
+
+
+// ----------------------------------------------------------
+// USER ADDRESS APIs
+// ----------------------------------------------------------
+
+// Add Address
+export const addAddress = async (data) => {
+  const res = await axiosInstance.post("/api/user/addresses/", data);
+  return res.data;
+};
+
+// Get Addresses
+export const getUserAddresses = async () => {
+  const res = await axiosInstance.get("/api/user/addresses/");
+  return res.data;
+};
+
+// ----------------------------------------------------------
+// CHECKOUT & PAYMENT APIs
+// ----------------------------------------------------------
+
+// Checkout
+export const checkout = async (data) => {
+  // data: { address_id, items: [{ product_id, quantity }] }
+  const res = await axiosInstance.post("/api/checkout/", data);
+  return res.data;
+};
+
+// Payment Success
+export const paymentSuccess = async (data) => {
+  // data: { order_id }
+  const res = await axiosInstance.post("/api/payment-success/", data);
   return res.data;
 };
 

@@ -1,6 +1,6 @@
 const constant = {
-  appBaseUrl: "https://mriigg.com",
-  // appBaseUrl: "http://192.168.1.4:8000",
+  // appBaseUrl: "https://mriigg.com",
+  appBaseUrl: "http://192.168.1.4:8000",
   imageBaseUrl: "http://127.0.0.1:8000",
 };
 

@@ -1,12 +1,13 @@
 import Screen from "@/components/Screen";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,9 +15,10 @@ import {
   View,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
-import { getSingleProductById } from "../server";
-import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../contexts/AuthContext";
+import { useCart } from "../contexts/CartContext";
+import { getSingleProductById } from "../server";
 
 
 
@@ -60,6 +62,9 @@ const getVariantFinalPrice = (variant, product) => {
 export default function ProductDetail() {
   const { id } = useLocalSearchParams();
   const { width } = Dimensions.get("window");
+  const { addToCart } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
 
   const insets = useSafeAreaInsets();
 
@@ -162,6 +167,22 @@ export default function ProductDetail() {
         : "";
 
     return `${product.name}${variantName}${qtyUnit}`;
+  };
+
+
+
+  const handleAddToCart = () => {
+    if (!user) {
+      // Redirect to login if not authenticated
+      router.push({
+        pathname: "/(auth)/sign-in",
+        params: { returnUrl: `/product/${id}` }, // Manually constructing path as consistent fallback
+      });
+      return;
+    }
+
+    addToCart(product, selectedVariant);
+    alert("Added to cart!"); // Simple feedback
   };
 
   return (
@@ -456,7 +477,7 @@ export default function ProductDetail() {
               styles.bottomBar,
               { marginBottom: bottomSpace > 0 ? 0 : 16 },
             ]}>
-              <TouchableOpacity style={styles.cartBtn}>
+              <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
                 <Ionicons name="cart-outline" size={22} color={COLORS.lavender} />
                 <Text style={styles.cartBtnText}>Add to Cart</Text>
               </TouchableOpacity>
