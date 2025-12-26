@@ -58,9 +58,12 @@ export default function ConfirmOrderScreen() {
                     <Image source={{ uri: item.image }} style={styles.itemImage} />
                     <View style={styles.itemInfo}>
                         <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
-                        <Text style={styles.itemVariant}>Qty: {item.qty} × ${item.price}</Text>
+                        {item.variantName && (
+                            <Text style={styles.itemVariantName}>{item.variantName}</Text>
+                        )}
+                        <Text style={styles.itemVariant}>Qty: {item.qty} × ₹{item.price}</Text>
                     </View>
-                    <Text style={styles.itemPrice}>${(item.qty * item.price).toFixed(2)}</Text>
+                    <Text style={styles.itemPrice}>₹{(item.qty * item.price).toFixed(2)}</Text>
                 </View>
             ))}
         </View>
@@ -70,7 +73,7 @@ export default function ConfirmOrderScreen() {
             <Text style={styles.sectionTitle}>Payment Details</Text>
             <View style={styles.billRow}>
                 <Text style={styles.billLabel}>Subtotal</Text>
-                <Text style={styles.billValue}>${totalAmount.toFixed(2)}</Text>
+                <Text style={styles.billValue}>₹{totalAmount.toFixed(2)}</Text>
             </View>
             <View style={styles.billRow}>
                 <Text style={styles.billLabel}>Delivery Fee</Text>
@@ -79,7 +82,7 @@ export default function ConfirmOrderScreen() {
             <View style={styles.divider} />
             <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total Payable</Text>
-                <Text style={styles.totalValue}>${totalAmount.toFixed(2)}</Text>
+                <Text style={styles.totalValue}>₹{totalAmount.toFixed(2)}</Text>
             </View>
         </View>
 
@@ -90,7 +93,7 @@ export default function ConfirmOrderScreen() {
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <View>
             <Text style={styles.footerTotalLabel}>Total Amount</Text>
-            <Text style={styles.footerTotalValue}>${totalAmount.toFixed(2)}</Text>
+            <Text style={styles.footerTotalValue}>₹{totalAmount.toFixed(2)}</Text>
         </View>
         <TouchableOpacity style={styles.payBtn} onPress={handlePayNow} activeOpacity={0.8}>
             <Text style={styles.payText}>Place Order</Text>
@@ -163,6 +166,7 @@ const styles = StyleSheet.create({
   itemImage: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#F3F4F6" },
   itemInfo: { flex: 1, marginLeft: 12, marginRight: 8 },
   itemName: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 4 },
+  itemVariantName: { fontSize: 12, color: "#6B7280", marginBottom: 2, fontStyle: 'italic' },
   itemVariant: { fontSize: 12, color: "#9CA3AF" },
   itemPrice: { fontSize: 14, fontWeight: "700", color: "#111827" },
 

@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 
@@ -8,6 +9,8 @@ import { CartProvider } from "./contexts/CartContext";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [appIsReady, setAppIsReady] = useState(false);
+
   useEffect(() => {
     const prepareApp = async () => {
       try {
@@ -15,10 +18,11 @@ export default function RootLayout() {
         // - token check
         // - api warmup
         // - fonts load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // 3 seconds splash
       } catch (e) {
         console.warn(e);
       } finally {
+        setAppIsReady(true);
         // ✅ Splash hide
         await SplashScreen.hideAsync();
       }
@@ -26,6 +30,18 @@ export default function RootLayout() {
 
     prepareApp();
   }, []);
+
+  if (!appIsReady) {
+      return (
+          <View style={styles.splashContainer}>
+               <Image 
+                   source={require('../assets/header_logo.png')} 
+                   style={styles.logo}
+               />
+               <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 20 }} />
+          </View>
+      )
+  }
 
   return (
     <AuthProvider>
@@ -39,3 +55,17 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+    splashContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+    logo: {
+        width: 200,
+        height: 100,
+        resizeMode: 'contain',
+    }
+});

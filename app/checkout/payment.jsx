@@ -26,7 +26,8 @@ export default function PaymentScreen() {
         address_id: Number(params.addressId),
         items: cartItems.map(item => ({
             product_id: item.productId,
-            quantity: item.qty
+            quantity: item.qty,
+            variation_id: item.variantId || null
         }))
       };
       

@@ -1,249 +1,242 @@
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Redirect, router } from "expo-router";
-import { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Redirect, useRouter } from "expo-router";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Profile() {
-  const [isLoading, setLoading] = useState(true);
-  const [isLoggedIn, setLoggedIn] = useState(false);
+  const router = useRouter();
+  const { user, loading, logout } = useAuth(); // ✅ Use Context
 
-  const [user, setUser] = useState(null); // 👈 STORE USER HERE
+  if (loading) return null; // Or a loading spinner
 
-  useEffect(() => {
-    checkLogin();
-  }, []);
-
-  async function checkLogin() {
-    const token = await AsyncStorage.getItem("accessToken");
-    const savedUser = await AsyncStorage.getItem("user");
-
-    setLoggedIn(!!token);
-
-    if (savedUser) {
-      setUser(JSON.parse(savedUser)); // 👈 SET USER FROM STORAGE
-    }
-
-    setLoading(false);
+  if (!user) {
+      return <Redirect href="/(auth)/sign-in" />;
   }
 
-  // ⏳ While checking token
-  if (isLoading) return null;
-
-  // ❌ If not logged in → redirect
-  if (!isLoggedIn || !user) {
-    return <Redirect href="/(auth)/sign-in" />;
+  const handleLogout = async () => {
+      await logout();
+      router.replace("/(auth)/sign-in");
   }
 
-  // 🧹 Logout function
-  async function handleLogout() {
-    await AsyncStorage.removeItem("accessToken");
-    await AsyncStorage.removeItem("refreshToken");
-    await AsyncStorage.removeItem("user");
-
-    router.replace("/(auth)/sign-in");
-  }
+  const QuickAction = ({ icon, label, onPress, color }) => (
+      <TouchableOpacity style={styles.quickAction} onPress={onPress}>
+          <View style={[styles.quickActionIcon, { backgroundColor: color }]}>
+             <Ionicons name={icon} size={22} color={COLORS.white} />
+          </View>
+          <Text style={styles.quickActionLabel}>{label}</Text>
+      </TouchableOpacity>
+  );
 
   return (
     <Screen>
-      {/* Header card */}
-      <View style={styles.headerCard}>
-        <Image
-          source={{
-            uri:
-              user?.profile_image ||
-              "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-          }}
-          style={styles.avatar}
-        />
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+          {/* Header Profile Section */}
+          <View style={styles.header}>
+              <View style={styles.profileRow}>
+                  <Image
+                    source={{
+                        uri: user?.profile_image 
+                             ? (user.profile_image.startsWith('http') ? user.profile_image : constant.appBaseUrl + user.profile_image)
+                             : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                    }}
+                    style={styles.avatar}
+                  />
+                  <View style={styles.userInfo}>
+                      <Text style={styles.welcomeText}>Hello,</Text>
+                      <Text style={styles.userName}>{user?.first_name || "User"} {user?.last_name || ""}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.editButton} onPress={() => router.push("/edit-profile")}>
+                      <Ionicons name="pencil" size={18} color={COLORS.primaryDark} />
+                  </TouchableOpacity>
+              </View>
+          </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={styles.userName}>
-            {user?.first_name} {user?.last_name}
-          </Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
-          <Text style={styles.userPhone}>{user?.mobile}</Text>
-        </View>
+          {/* Quick Actions Grid */}
+          <View style={styles.quickActionsContainer}>
+              <QuickAction icon="cube-outline" label="Orders" color="#4A90E2" onPress={() => router.push("/(tabs)/orders")} />
+              <QuickAction icon="heart-outline" label="Cart" color="#E91E63" onPress={() => router.push("/(tabs)/cart")} />
+              <QuickAction icon="gift-outline" label="Coupons" color="#F5A623" onPress={() => {}} />
+              <QuickAction icon="headset-outline" label="Help" color="#7ED321" onPress={() => {}} />
+          </View>
 
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => router.push("/edit-profile")}
-        >
-          <Ionicons
-            name="create-outline"
-            size={20}
-            color={COLORS.primaryDark}
-          />
-        </TouchableOpacity>
-      </View>
+          {/* Settings List */}
+          <View style={styles.section}>
+              <Text style={styles.sectionHeader}>Account Settings</Text>
+              
+              <View style={styles.menuCard}>
+                  <MenuItem icon="person-outline" title="Edit Profile" onPress={() => router.push("/edit-profile")} />
+                  <MenuItem icon="map-outline" title="Saved Addresses" onPress={() => router.push("/address/list")} />
+                  <MenuItem icon="language-outline" title="Select Language" onPress={() => router.push("/language/select")} />
+                  <MenuItem icon="notifications-outline" title="Notification Settings" lastItem onPress={() => {}} />
+              </View>
+          </View>
 
-      {/* MENU LIST */}
-      <View style={styles.menuSection}>
-        <SectionTitle text="My Activity" />
+           <View style={styles.section}>
+              <Text style={styles.sectionHeader}>My Activity</Text>
+              <View style={styles.menuCard}>
+                  <MenuItem icon="star-outline" title="Reviews" onPress={() => {}} />
+                  <MenuItem icon="help-circle-outline" title="Questions & Answers" lastItem onPress={() => {}} />
+              </View>
+          </View>
 
-        <MenuItem
-          icon="cart-outline"
-          title="My Orders"
-          onPress={() => router.push("/(tabs)/orders")}
-        />
+          <View style={styles.section}>
+               <Text style={styles.sectionHeader}>Feedback & Information</Text>
+               <View style={styles.menuCard}>
+                   <MenuItem icon="document-text-outline" title="Terms, Policies and Licenses" onPress={() => {}} />
+                   <MenuItem icon="help-circle-outline" title="Browse FAQs" lastItem onPress={() => {}} />
+               </View>
+          </View>
 
-        <MenuItem
-          icon="heart-outline"
-          title="Wishlist"
-          onPress={() => router.push("/(tabs)/wishlist")}
-        />
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
 
-        <MenuItem
-          icon="gift-outline"
-          title="My Earnings"
-          onPress={() => router.push("/affiliate")}
-        />
-
-        <SectionTitle text="Settings" />
-
-        <MenuItem
-          icon="account-edit-outline"
-          title="Edit Profile"
-          onPress={() => router.push("/edit-profile")}
-        />
-
-        <MenuItem
-          icon="lock-outline"
-          title="Change Password"
-          onPress={() => router.push("/change-password")}
-        />
-
-        {/* 🔥 Logout Button */}
-        <MenuItem icon="logout" title="Logout" logout onPress={handleLogout} />
-      </View>
-
-      <View style={{ height: 100 }} />
+          <View style={{ height: 100 }} />
+      </ScrollView>
     </Screen>
   );
 }
 
-/* SECTION TITLE */
-function SectionTitle({ text }) {
-  return <Text style={styles.sectionTitle}>{text}</Text>;
-}
-
-/* MENU ITEM */
-function MenuItem({ icon, title, logout, onPress }) {
-  return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-      <View style={styles.menuLeft}>
-        <MaterialCommunityIcons
-          name={icon}
-          size={24}
-          color={logout ? "#FF3B30" : COLORS.primaryDark}
-        />
-        <Text
-          style={[
-            styles.menuText,
-            logout && { color: "#FF3B30", fontWeight: "700" },
-          ]}
+function MenuItem({ icon, title, onPress, lastItem }) {
+    return (
+        <TouchableOpacity 
+            style={[styles.menuItem, lastItem && styles.menuItemLast]} 
+            onPress={onPress}
         >
-          {title}
-        </Text>
-      </View>
-
-      <Ionicons
-        name="chevron-forward"
-        size={22}
-        color={logout ? "#FF3B30" : COLORS.grey}
-      />
-    </TouchableOpacity>
-  );
+            <View style={styles.menuLeft}>
+                <Ionicons name={icon} size={22} color={COLORS.primaryDark} />
+                <Text style={styles.menuText}>{title}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.grey} />
+        </TouchableOpacity>
+    )
 }
 
 const styles = StyleSheet.create({
-  headerCard: {
-    backgroundColor: COLORS.white,
-    margin: 16,
-    padding: 18,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 8,
-    shadowColor: COLORS.primaryDark,
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { height: 4, width: 0 },
-    gap: 16,
+  container: {
+    flex: 1,
+    backgroundColor: '#F1F3F6',
   },
-
+  header: {
+      backgroundColor: COLORS.white,
+      padding: 20,
+      paddingTop: 10,
+  },
+  profileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+  },
   avatar: {
-    width: 75,
-    height: 75,
-    borderRadius: 40,
-    backgroundColor: COLORS.lilac,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: '#f0f0f0',
   },
-
+  userInfo: {
+      flex: 1,
+      marginLeft: 16,
+  },
+  welcomeText: {
+      fontSize: 14,
+      color: COLORS.grey,
+  },
   userName: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.textDark,
+      fontSize: 20,
+      fontWeight: '700',
+      color: COLORS.textDark,
+  },
+  editButton: {
+      backgroundColor: '#F5F5F5',
+      padding: 8,
+      borderRadius: 20,
+  },
+  
+  /** Quick Actions */
+  quickActionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      backgroundColor: COLORS.white,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      marginTop: 2,
+      marginBottom: 10,
+      elevation: 1,
+  },
+  quickAction: {
+      alignItems: 'center',
+      gap: 6,
+  },
+  quickActionIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  quickActionLabel: {
+      fontSize: 12,
+      color: COLORS.textDark,
+      fontWeight: '500',
   },
 
-  userEmail: {
-    fontSize: 13,
-    color: COLORS.grey,
-    marginTop: 2,
+  /** Sections */
+  section: {
+      paddingHorizontal: 16,
+      marginBottom: 20,
   },
-
-  userPhone: {
-    fontSize: 13,
-    color: COLORS.grey,
-    marginTop: 2,
+  sectionHeader: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.grey,
+      marginBottom: 10,
+      textTransform: 'uppercase',
   },
-
-  editBtn: {
-    backgroundColor: COLORS.lilac,
-    padding: 10,
-    borderRadius: 12,
-    elevation: 2,
+  menuCard: {
+      backgroundColor: COLORS.white,
+      borderRadius: 8,
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
   },
-
-  menuSection: {
-    backgroundColor: COLORS.white,
-    marginHorizontal: 16,
-    borderRadius: 20,
-    elevation: 5,
-    paddingBottom: 10,
-    shadowColor: COLORS.primaryDark,
-  },
-
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.primaryDark,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 6,
-    opacity: 0.75,
-  },
-
   menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lilac,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
   },
-
+  menuItemLast: {
+      borderBottomWidth: 0,
+  },
   menuLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+  },
+  menuText: {
+      fontSize: 15,
+      color: COLORS.textDark,
+      fontWeight: '500',
   },
 
-  menuText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.textDark,
+  /** Logout */
+  logoutButton: {
+      marginHorizontal: 16,
+      backgroundColor: COLORS.white,
+      paddingVertical: 14,
+      alignItems: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      marginBottom: 20,
   },
+  logoutText: {
+      color: '#FF3B30',
+      fontSize: 16,
+      fontWeight: '600',
+  }
 });

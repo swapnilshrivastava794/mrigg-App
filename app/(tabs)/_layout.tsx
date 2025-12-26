@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const COLORS = {
@@ -16,35 +15,39 @@ const COLORS = {
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
-  // ⭐ Android ke liye NO extra padding
-  const bottomSpace =
-    Platform.OS === "android"
-      ? insets.bottom // mostly 0
-      : insets.bottom;
+  // Fix: Ensure we always respect the safe area bottom
+  // Android gesture bars often have a non-zero inset.
+  const paddingBottom = Math.max(insets.bottom, 10);
+  const tabBarHeight = 60 + paddingBottom;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-
+        
+        // Colors
         tabBarActiveTintColor: COLORS.primaryDark,
         tabBarInactiveTintColor: COLORS.grey,
 
+        // Premium Tab Bar Style
         tabBarStyle: {
-          backgroundColor: COLORS.lilac,
-          borderTopWidth: 1,
-          borderTopColor: COLORS.softPurple,
-
-          // ⭐ Perfect safe area with ZERO extra padding
-          height: 60 + bottomSpace,
-          paddingBottom: bottomSpace,
-          paddingTop: 6,
+          backgroundColor: COLORS.white,
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          height: tabBarHeight,
+          paddingBottom: paddingBottom,
+          paddingTop: 8,
         },
 
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
+          marginBottom: 4,
         },
       }}
     >
@@ -53,26 +56,37 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home-outline" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+                name={focused ? "home" : "home-outline"} 
+                size={24} 
+                color={color} 
+            />
           ),
         }}
       />
+      
+      {/* Wishlist Screen (Commented out) 
       <Tabs.Screen
         name="wishlist"
         options={{
           title: "Wishlist",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="heart-outline" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "heart" : "heart-outline"} size={24} color={color} />
           ),
         }}
-      />
+      /> */}
+
       <Tabs.Screen
         name="cart"
         options={{
           title: "Cart",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="cart-outline" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+                name={focused ? "cart" : "cart-outline"} 
+                size={24} 
+                color={color} 
+            />
           ),
         }}
       />
@@ -80,8 +94,12 @@ export default function TabLayout() {
         name="orders"
         options={{
           title: "Orders",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="clipboard-outline" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+                name={focused ? "cube" : "cube-outline"} 
+                size={24} 
+                color={color} 
+            />
           ),
         }}
       />
@@ -89,8 +107,12 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person-outline" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+                name={focused ? "person" : "person-outline"} 
+                size={24} 
+                color={color} 
+            />
           ),
         }}
       />

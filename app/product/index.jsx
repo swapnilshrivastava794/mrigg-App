@@ -1,44 +1,36 @@
 import Screen from "@/components/Screen";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { COLORS } from "@/src/constants/colors";
+import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { getProductById, getProductsByType, searchProducts } from "../server";
 
-const COLORS = {
-  lavender: "#D9C4F0",
-  lilac: "#EADCF7",
-  white: "#FFFFFF",
-  dark: "#333",
-  gray: "#777",
-  green: "#27ae60",
-};
-
 const TITLES = {
-  latest: "Latest Products",
-  popular: "Popular Products",
-  featured: "Featured Products",
+  latest: "Latest Drops",
+  popular: "Trending Now",
+  featured: "Editor's Pick",
 };
 
 export default function ProductList() {
   const { category, categoryId, type, q  } = useLocalSearchParams();
 
   const pageTitle = q
-  ? `Search results for "${q}"`
-  : TITLES[type] || category || "All Products";
+  ? `Results for "${q}"`
+  : TITLES[type] || category || "Collection";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [limit] = useState(5);
+  const [limit] = useState(10); // Increased limit for better scroll exp
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -60,7 +52,6 @@ export default function ProductList() {
       // 🔍 CASE 0: SEARCH MODE (NEW)
         if (q) {
           res = await searchProducts(q, pageNo, limit);
-          console.log("SEARCH RES:", res);
         }
 
         // ✅ CASE 1: TYPE BASED
@@ -110,26 +101,36 @@ export default function ProductList() {
     return (
       <TouchableOpacity
         style={styles.card}
+        activeOpacity={0.9}
         onPress={() => router.push(`/product/${item.id}`)}
       >
-        <Image source={{ uri: image }} style={styles.image} />
-
-        <Text style={styles.name} numberOfLines={2}>
-          {item.name}
-        </Text>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>₹{item.final_price}</Text>
-          <Text style={styles.mrp}>₹{item.price}</Text>
-          {discount > 0 && (
-            <Text style={styles.discount}>{discount}% off</Text>
-          )}
+        <View style={styles.imageContainer}>
+             <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+             {discount > 0 && (
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{discount}% OFF</Text>
+                </View>
+             )}
         </View>
 
-        <View style={styles.ratingRow}>
-          <Text style={styles.rating}>
-            {item.stock > 0 ? "In Stock" : "Out of Stock"}
-          </Text>
+        <View style={styles.infoContainer}>
+            <Text style={styles.brandName} numberOfLines={1}>
+                 {item.subcategory?.name || "Brand"}
+            </Text>
+            <Text style={styles.name} numberOfLines={2}>
+            {item.name}
+            </Text>
+
+            <View style={styles.priceRow}>
+                 <View>
+                    <Text style={styles.price}>₹{item.final_price}</Text>
+                    {discount > 0 && <Text style={styles.mrp}>₹{item.price}</Text>}
+                 </View>
+                {/* Add Button Visual Only */}
+                <View style={styles.addBtn}>
+                    <Ionicons name="add" size={16} color={COLORS.white} />
+                </View>
+            </View>
         </View>
       </TouchableOpacity>
     );
@@ -137,70 +138,80 @@ export default function ProductList() {
 
   return (
     <>
-      <Stack.Screen options={{ title: pageTitle }} />
+      <Stack.Screen options={{ title: pageTitle, headerShown: false }} />
 
       <Screen scroll={false}>
         {/* HEADER */}
-        <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>{pageTitle}</Text>
-          <Text style={styles.bannerSubtitle}>
-            {products.length} items available
-          </Text>
+        <View style={styles.header}>
+             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
+             </TouchableOpacity>
+             <View>
+                 <Text style={styles.headerTitle}>{pageTitle}</Text>
+                 <Text style={styles.headerSubtitle}>{loading ? "Loading..." : `${products.length} items`}</Text>
+             </View>
         </View>
 
-        {/* FILTER BAR */}
-        <View style={styles.filterBar}>
-          <TouchableOpacity style={styles.filterItem}>
-            <Ionicons name="funnel-outline" size={18} />
-            <Text style={styles.filterText}>Filter</Text>
-          </TouchableOpacity>
+        {/* CONTAINER */}
+        <View style={styles.container}>
+            
+            {/* FILTER BAR */}
+            <View style={styles.filterBar}>
+                <TouchableOpacity style={styles.filterBtn}>
+                    <Ionicons name="filter-outline" size={16} color={COLORS.textDark} />
+                    <Text style={styles.filterText}>Filter</Text>
+                </TouchableOpacity>
+                <View style={styles.verticalDivider} />
+                <TouchableOpacity style={styles.filterBtn}>
+                    <Ionicons name="swap-vertical-outline" size={16} color={COLORS.textDark} />
+                    <Text style={styles.filterText}>Sort By</Text>
+                </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity style={styles.filterItem}>
-            <MaterialCommunityIcons name="swap-vertical" size={20} />
-            <Text style={styles.filterText}>Sort</Text>
-          </TouchableOpacity>
+            {/* LIST */}
+            {loading ? (
+            <View style={styles.loader}>
+                <ActivityIndicator size="large" color={COLORS.primaryDark} />
+            </View>
+            ) : products.length === 0 ? (
+            <View style={styles.noData}>
+                <Ionicons name="search-outline" size={48} color="#ddd" />
+                <Text style={styles.noDataText}>No products found</Text>
+                <Text style={styles.noDataSubText}>Try searching for something else</Text>
+            </View>
+            ) : (
+            <FlatList
+                data={products}
+                numColumns={2}
+                keyExtractor={(item) => item.id.toString()}
+                columnWrapperStyle={{ justifyContent: "space-between" }}
+                contentContainerStyle={{
+                    paddingHorizontal: 16,
+                    paddingTop: 16,
+                    paddingBottom: 100,
+                }}
+                renderItem={renderItem}
+                showsVerticalScrollIndicator={false}
+                onEndReached={() => {
+                if (hasMore && !loadingMore) {
+                    const nextPage = page + 1;
+                    setPage(nextPage);
+                    loadProducts(nextPage);
+                }
+                }}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                loadingMore ? (
+                    <ActivityIndicator
+                    style={{ marginVertical: 20 }}
+                    size="small"
+                    color={COLORS.primaryDark}
+                    />
+                ) : null
+                }
+            />
+            )}
         </View>
-
-        {/* LOADER */}
-        {loading ? (
-          <View style={styles.loader}>
-            <ActivityIndicator size="large" color={COLORS.lavender} />
-          </View>
-        ) : products.length === 0 ? (
-          <View style={styles.noData}>
-            <Text style={styles.noDataText}>No products found</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={products}
-            numColumns={2}
-            keyExtractor={(item) => item.id.toString()}
-            columnWrapperStyle={{ justifyContent: "space-between" }}
-            contentContainerStyle={{
-              paddingHorizontal: 12,
-              paddingTop: 10,
-              paddingBottom: 60,
-            }}
-            renderItem={renderItem}
-            onEndReached={() => {
-              if (hasMore && !loadingMore) {
-                const nextPage = page + 1;
-                setPage(nextPage);
-                loadProducts(nextPage);
-              }
-            }}
-            onEndReachedThreshold={0.3}
-            ListFooterComponent={
-              loadingMore ? (
-                <ActivityIndicator
-                  style={{ marginVertical: 20 }}
-                  size="small"
-                  color={COLORS.lavender}
-                />
-              ) : null
-            }
-          />
-        )}
       </Screen>
     </>
   );
@@ -208,106 +219,160 @@ export default function ProductList() {
 
 /* STYLES */
 const styles = StyleSheet.create({
-  banner: {
-    backgroundColor: COLORS.lilac,
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 12,
-    marginTop: 10,
+  header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: COLORS.white,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F0F0F0',
+      gap: 12,
   },
-  bannerTitle: { fontSize: 18, fontWeight: "700" },
-  bannerSubtitle: { fontSize: 14, color: COLORS.gray, marginTop: 2 },
+  backBtn: {
+      padding: 4,
+  },
+  headerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: COLORS.textDark,
+  },
+  headerSubtitle: {
+      fontSize: 12,
+      color: COLORS.grey,
+  },
 
+  container: {
+      flex: 1,
+      backgroundColor: '#F1F3F6',
+  },
+
+  /* Filters */
   filterBar: {
-    flexDirection: "row",
-    marginTop: 12,
-    paddingHorizontal: 12,
-    justifyContent: "space-between",
+      flexDirection: 'row',
+      backgroundColor: COLORS.white,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
   },
-  filterItem: {
-    flexDirection: "row",
-    backgroundColor: COLORS.white,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    elevation: 3,
-    alignItems: "center",
-    gap: 6,
+  filterBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
   },
-  filterText: { fontSize: 14 },
+  filterText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.textDark,
+  },
+  verticalDivider: {
+      width: 1,
+      backgroundColor: '#E0E0E0',
+      height: '100%',
+  },
 
+  /* Product Card */
   card: {
-  backgroundColor: COLORS.white,
-  width: "48%",
-  borderRadius: 16,
-  padding: 10,
-  marginBottom: 16,
-  elevation: 4,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.1,
-  shadowRadius: 8,
-},
+      backgroundColor: COLORS.white,
+      width: "48%",
+      borderRadius: 12,
+      marginBottom: 16,
+      overflow: 'hidden',
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      shadowOffset: {width: 0, height: 2},
+  },
+  imageContainer: {
+      height: 160,
+      backgroundColor: '#f9f9f9',
+      position: 'relative',
+  },
   image: {
-  width: "100%",
-  height: 140,
-  borderRadius: 14,
-  backgroundColor: "#f2f2f2",
-},
+      width: "100%",
+      height: "100%",
+  },
+  badge: {
+      position: 'absolute',
+      bottom: 8,
+      left: 8,
+      backgroundColor: COLORS.white,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+  },
+  badgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#FF4757',
+  },
+
+  infoContainer: {
+      padding: 10,
+  },
+  brandName: {
+      fontSize: 10,
+      color: COLORS.grey,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      marginBottom: 2,
+  },
   name: {
-  fontSize: 14,
-  fontWeight: "700",
-  marginTop: 8,
-  color: COLORS.dark,
-  lineHeight: 18,
-},
-
+      fontSize: 13,
+      fontWeight: '600',
+      color: COLORS.textDark,
+      lineHeight: 18,
+      height: 36, // 2 lines
+  },
   priceRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-  marginTop: 6,
-},
-price: {
-  fontSize: 16,
-  fontWeight: "900",
-  color: COLORS.lavender,
-},
-mrp: {
-  fontSize: 12,
-  textDecorationLine: "line-through",
-  color: COLORS.gray,
-},
-discount: {
-  fontSize: 12,
-  color: COLORS.green,
-  fontWeight: "700",
-},
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      marginTop: 8,
+  },
+  price: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: COLORS.textDark,
+  },
+  mrp: {
+      fontSize: 11,
+      textDecorationLine: "line-through",
+      color: COLORS.grey,
+  },
+  addBtn: {
+      backgroundColor: COLORS.primaryDark,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
 
-  ratingRow: {
-  marginTop: 8,
-  backgroundColor: COLORS.lilac,
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 20,
-  alignSelf: "flex-start",
-},
-rating: {
-  fontSize: 11,
-  fontWeight: "800",
-  color: COLORS.dark,
-},
-
-
-  loader: { marginTop: 50, alignItems: "center" },
-
+  /* States */
+  loader: { 
+      flex: 1, 
+      justifyContent: "center", 
+      alignItems: "center" 
+  },
   noData: {
-    marginTop: 80,
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
+    marginTop: 60,
   },
   noDataText: {
-    fontSize: 16,
-    color: COLORS.gray,
-    fontWeight: "600",
+    fontSize: 18,
+    color: COLORS.textDark,
+    fontWeight: "700",
+    marginTop: 12,
+  },
+  noDataSubText: {
+      fontSize: 14,
+      color: COLORS.grey,
+      marginTop: 4,
   },
 });

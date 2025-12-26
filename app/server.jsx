@@ -128,6 +128,16 @@ export function signup(formData) {
   });
 }
 
+// UPDATE PROFILE → multipart/form-data
+export const updateProfile = async (formData) => {
+  const res = await axiosInstance.patch("/api/auth/update-profile/", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+};
+
 
 export function getCategories() {
   return axiosInstance.get("/api/categories/", {
@@ -213,6 +223,24 @@ export const addAddress = async (data) => {
 // Get Addresses
 export const getUserAddresses = async () => {
   const res = await axiosInstance.get("/api/user/addresses/");
+  return res.data;
+};
+
+// ----------------------------------------------------------
+// ORDER APIs
+// ----------------------------------------------------------
+
+export const getOrders = async (status, search) => {
+  const params = {};
+  if (status && status !== "All") params.status = status.toLowerCase();
+  if (search) params.search = search;
+
+  const res = await axiosInstance.get("/api/orders/", { params });
+  return res.data;
+};
+
+export const getSingleOrder = async (id) => {
+  const res = await axiosInstance.get(`/api/orders/${id}/`);
   return res.data;
 };
 
