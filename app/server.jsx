@@ -262,4 +262,11 @@ export const paymentSuccess = async (data) => {
   return res.data;
 };
 
+// Gokwik Initiate
+export const initiateGokwik = async (data) => {
+    // data: { order_id }
+    const res = await axiosInstance.post("/api/gokwik/initiate/", data);
+    return res.data;
+};
+
 export default axiosInstance;
