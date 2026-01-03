@@ -1,19 +1,46 @@
 import Screen from "@/components/Screen";
+import constant from "@/constants/constant";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, useRouter } from "expo-router";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
+
 
 export default function Profile() {
   const router = useRouter();
   const { user, loading, logout } = useAuth(); // ✅ Use Context
 
-  if (loading) return null; // Or a loading spinner
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   if (!user) {
-      return <Redirect href="/(auth)/sign-in" />;
+    return (
+      <Screen>
+        <View style={styles.authContainer}>
+          <View style={styles.authIconContainer}>
+            <Ionicons name="person" size={50} color={COLORS.primary} />
+          </View>
+          <Text style={styles.authTitle}>Login Required</Text>
+          <Text style={styles.authSubTitle}>
+            Please log in to access your profile, orders, and saved addresses.
+          </Text>
+          <TouchableOpacity
+            style={styles.authButton}
+            onPress={() => router.push("/(auth)/sign-in")}
+          >
+            <Text style={styles.authButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
+    );
   }
+
 
   const handleLogout = async () => {
       await logout();
@@ -30,7 +57,7 @@ export default function Profile() {
   );
 
   return (
-    <Screen>
+    <Screen scroll={false}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {/* Header Profile Section */}
           <View style={styles.header}>
@@ -238,5 +265,52 @@ const styles = StyleSheet.create({
       color: '#FF3B30',
       fontSize: 16,
       fontWeight: '600',
+  },
+  
+  /** Auth State */
+  authContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 100, // Move it down a bit
+  },
+  authIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.lilac,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+    marginBottom: 10,
+  },
+  authSubTitle: {
+    fontSize: 16,
+    color: COLORS.grey,
+    textAlign: 'center',
+    marginBottom: 30,
+    maxWidth: '80%',
+  },
+  authButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  authButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: 'bold',
   }
 });

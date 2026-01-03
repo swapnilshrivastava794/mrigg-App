@@ -1,4 +1,5 @@
 import Screen from "@/components/Screen";
+import constant from "@/constants/constant";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -19,6 +20,7 @@ import {
 } from "react-native";
 import { useAuth } from "./contexts/AuthContext";
 import { updateProfile } from "./server";
+
 
 export default function EditProfile() {
   const router = useRouter();
