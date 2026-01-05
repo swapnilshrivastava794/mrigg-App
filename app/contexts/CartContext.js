@@ -1,24 +1,75 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState } from "react";
+import { applyCoupon } from "../server"; // Import API
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
+  const [coupon, setCoupon] = useState(null);
 
-  // Load Cart
+  // Load Cart & Coupon
   useEffect(() => {
     loadCart();
   }, []);
 
+  // Re-validate Coupon when Cart Changes
+  useEffect(() => {
+      const validateCoupon = async () => {
+          if (!coupon || cartItems.length === 0) {
+              if (coupon && cartItems.length === 0) {
+                  // Cart emptied, remove coupon
+                  removeCoupon();
+              }
+              return;
+          }
+
+          const currentTotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+          try {
+              // Re-check coupon with new total
+              const res = await applyCoupon({
+                  code: coupon.code,
+                  cart_total: currentTotal
+              });
+
+              // Update coupon with new values (discount might have changed)
+               setCoupon(prev => ({
+                   ...prev,
+                   ...res,
+                   code: coupon.code // ensure code persists
+               }));
+               AsyncStorage.setItem("coupon", JSON.stringify({ ...coupon, ...res }));
+
+          } catch (error) {
+              console.log("Coupon no longer valid:", error);
+              // Coupon became invalid (e.g. total dropped below threshold)
+              removeCoupon();
+              // Optional: Toast "Coupon removed as criteria not met"
+          }
+      };
+
+      // Debounce slightly to avoid rapid API calls during rapid qty updates
+      const timer = setTimeout(() => {
+          if (coupon) validateCoupon();
+      }, 500);
+
+      return () => clearTimeout(timer);
+
+  }, [cartItems]);
+
   const loadCart = async () => {
     try {
       const storedCart = await AsyncStorage.getItem("cart");
+      const storedCoupon = await AsyncStorage.getItem("coupon");
       if (storedCart) {
         setCartItems(JSON.parse(storedCart));
       }
+      if (storedCoupon) {
+        setCoupon(JSON.parse(storedCoupon));
+      }
     } catch (error) {
-      console.log("Failed to load cart", error);
+      console.log("Failed to load cart/coupon", error);
     }
   };
 
@@ -28,6 +79,24 @@ export const CartProvider = ({ children }) => {
     } catch (error) {
       console.log("Failed to save cart", error);
     }
+  };
+
+  const applyCouponToCart = async (couponData) => {
+      setCoupon(couponData);
+      try {
+          await AsyncStorage.setItem("coupon", JSON.stringify(couponData));
+      } catch (e) {
+          console.log("Failed to save coupon", e);
+      }
+  };
+
+  const removeCoupon = async () => {
+      setCoupon(null);
+      try {
+          await AsyncStorage.removeItem("coupon");
+      } catch (e) {
+          console.log("Failed to remove coupon", e);
+      }
   };
 
   // Add Item
@@ -83,7 +152,9 @@ export const CartProvider = ({ children }) => {
   // Clear Cart
   const clearCart = () => {
     setCartItems([]);
+    setCoupon(null); // Also clear coupon? Usually yes.
     saveCart([]);
+    AsyncStorage.removeItem("coupon");
   };
 
   // Adjust Qty
@@ -104,7 +175,7 @@ export const CartProvider = ({ children }) => {
 
   return (
     <CartContext.Provider
-      value={{ cartItems, addToCart, removeFromCart, clearCart, updateQuantity }}
+      value={{ cartItems, coupon, addToCart, removeFromCart, clearCart, updateQuantity, applyCouponToCart, removeCoupon }}
     >
       {children}
     </CartContext.Provider>

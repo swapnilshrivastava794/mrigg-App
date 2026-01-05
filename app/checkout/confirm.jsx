@@ -8,7 +8,7 @@ export default function ConfirmOrderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addressJson } = useLocalSearchParams();
-  const { cartItems } = useCart();
+  const { cartItems, coupon } = useCart();
   
   const address = addressJson ? JSON.parse(addressJson) : null;
 
@@ -17,10 +17,14 @@ export default function ConfirmOrderScreen() {
     0
   );
 
+  const finalTotal = coupon 
+    ? (Number(coupon.new_total) || (totalAmount - (coupon.discount_amount || 0)))
+    : totalAmount;
+
   const handlePayNow = () => {
     router.push({
         pathname: "/checkout/payment",
-        params: { addressId: address?.id, totalAmount: totalAmount.toFixed(2) }
+        params: { addressId: address?.id, totalAmount: finalTotal.toFixed(2) }
     });
   };
 
@@ -79,10 +83,18 @@ export default function ConfirmOrderScreen() {
                 <Text style={styles.billLabel}>Delivery Fee</Text>
                 <Text style={[styles.billValue, { color: '#059669' }]}>Free</Text>
             </View>
+
+            {coupon && (
+                <View style={styles.billRow}>
+                    <Text style={styles.billLabel}>Coupon Discount</Text>
+                    <Text style={[styles.billValue, { color: '#059669' }]}>- ₹{coupon.discount_amount}</Text>
+                </View>
+            )}
+
             <View style={styles.divider} />
             <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total Payable</Text>
-                <Text style={styles.totalValue}>₹{totalAmount.toFixed(2)}</Text>
+                <Text style={styles.totalValue}>₹{finalTotal.toFixed(2)}</Text>
             </View>
         </View>
 
@@ -93,7 +105,7 @@ export default function ConfirmOrderScreen() {
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <View>
             <Text style={styles.footerTotalLabel}>Total Amount</Text>
-            <Text style={styles.footerTotalValue}>₹{totalAmount.toFixed(2)}</Text>
+            <Text style={styles.footerTotalValue}>₹{finalTotal.toFixed(2)}</Text>
         </View>
         <TouchableOpacity style={styles.payBtn} onPress={handlePayNow} activeOpacity={0.8}>
             <Text style={styles.payText}>Place Order</Text>

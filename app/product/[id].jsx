@@ -3,22 +3,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  Keyboard,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import { getSingleProductById } from "../server";
+import { applyCoupon, getSingleProductById } from "../server";
 
 const { width } = Dimensions.get("window");
 
@@ -50,7 +52,7 @@ const getVariantFinalPrice = (variant, product) => {
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams();
-  const { addToCart } = useCart();
+  const { addToCart, applyCouponToCart } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -62,6 +64,13 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFullDesc, setShowFullDesc] = useState(false);
+  
+  // Coupon State
+  const [couponCode, setCouponCode] = useState("");
+  const [couponMsg, setCouponMsg] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState(null); // { discount_amount: number, new_total: number }
+
   const scrollViewRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -120,21 +129,24 @@ export default function ProductDetail() {
     ? getVariantFinalPrice(selectedVariant, product)
     : Number(product.final_price);
 
+  const finalPrice = appliedDiscount 
+      ? (appliedDiscount.new_total || (sellingPrice - (appliedDiscount.discount_amount || 0))) 
+      : sellingPrice;
+
   const basePrice = Number(product.price);
 
   const discount =
-    basePrice > sellingPrice
-      ? Math.round(((basePrice - sellingPrice) / basePrice) * 100)
+    basePrice > finalPrice
+      ? Math.round(((basePrice - finalPrice) / basePrice) * 100)
       : 0;
 
   const getProductTitle = () => {
-    if (!selectedVariant) return product.name;
-    const variantName = selectedVariant.name ? ` – ${selectedVariant.name}` : "";
-    const qtyUnit =
-      selectedVariant.quantity && selectedVariant.unit
-        ? ` (${selectedVariant.quantity} ${selectedVariant.unit})`
-        : "";
-    return `${product.name}${variantName}${qtyUnit}`;
+    if (selectedVariant) {
+        // User requested "variant hi product hoga" (Variant IS the product)
+        // If variant name is present, use it. Otherwise construct from Qty/Unit.
+        return selectedVariant.name || `${product.name} ${selectedVariant.quantity || ''}${selectedVariant.unit || ''}`;
+    }
+    return product.name;
   };
 
   const handleAddToCart = () => {
@@ -145,8 +157,50 @@ export default function ProductDetail() {
       });
       return;
     }
+    // If a coupon was successfully applied, it is already stored in Context via handleApplyCoupon
+    // We just proceed to add item
     addToCart(product, selectedVariant);
     alert("Added to cart!");
+  };
+
+  const handleApplyCoupon = async () => {
+      if (!couponCode.trim()) return;
+      
+      // If user not logged in, ask to login? Or allow checking?
+      // Usually checking requires Auth if backend requires it.
+      // The user request curl header shows Authorization. So yes, need auth.
+      if (!user) {
+          router.push({
+              pathname: "/(auth)/sign-in",
+              params: { returnUrl: `/product/${id}` },
+          });
+          return;
+      }
+
+      try {
+          setApplyingCoupon(true);
+          setCouponMsg(null);
+          setAppliedDiscount(null);
+          Keyboard.dismiss();
+
+          const res = await applyCoupon({ 
+              code: couponCode, 
+              cart_total: sellingPrice
+          });
+
+          // Assuming res contains { valid: true/false, message: "...", discount_amount: 50, new_total: 100 }
+          
+          setCouponMsg({ type: 'success', text: "Coupon Applied Successfully!" });
+          setAppliedDiscount(res); // Update local state for immediate price update
+          applyCouponToCart({ code: couponCode, ...res });
+
+      } catch (err) {
+          const errorMsg = err?.response?.data?.detail || err?.message || "Invalid Coupon";
+          setCouponMsg({ type: 'error', text: errorMsg });
+          setAppliedDiscount(null);
+      } finally {
+          setApplyingCoupon(false);
+      }
   };
 
   return (
@@ -215,8 +269,8 @@ export default function ProductDetail() {
 
               {/* Price */}
               <View style={styles.priceRow}>
-                  <Text style={styles.sellingPrice}>₹{sellingPrice}</Text>
-                  {basePrice > sellingPrice && <Text style={styles.mrp}>₹{basePrice}</Text>}
+                  <Text style={styles.sellingPrice}>₹{finalPrice}</Text>
+                  {basePrice > finalPrice && <Text style={styles.mrp}>₹{basePrice}</Text>}
                   {discount > 0 && (
                       <View style={styles.discountTag}>
                           <Text style={styles.discountText}>{discount}% OFF</Text>
@@ -233,17 +287,50 @@ export default function ProductDetail() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
                     {product.variations.map((variant) => {
                       const isActive = selectedVariant?.id === variant.id;
+                      const vPrice = Number(variant.offerprice) > 0 ? Number(variant.offerprice) : Number(variant.price_modifier);
+                      const vMrp = Number(variant.price_modifier) > vPrice ? Number(variant.price_modifier) : 0;
+                      // Display Quantity/Unit primarily (e.g. 150g)
+                      const vQtyStr = variant.quantity && variant.unit ? `${variant.quantity} ${variant.unit}` : null;
+                      // Use name if quantity not there, OR if name is available to show as description
+                      const vName = variant.name;
+
                       return (
                         <TouchableOpacity
                           key={variant.id}
                           style={[styles.variantChip, isActive && styles.variantChipActive]}
                           onPress={() => setSelectedVariant(isActive ? null : variant)}
+                          activeOpacity={0.7}
                         >
-                          <Text style={[styles.variantText, isActive && styles.variantTextActive]}>
-                              {variant.name}
-                          </Text>
-                          {isValidColor(variant.color_code) && (
-                              <View style={[styles.colorDot, { backgroundColor: variant.color_code }]} />
+                          {/* Top: Size (e.g. 150g) */}
+                          {vQtyStr && (
+                              <Text style={[styles.variantTitle, isActive && styles.variantTextActive]}>
+                                  {vQtyStr}
+                              </Text>
+                          )}
+
+                          {/* Name/Description (e.g. Description text) */}
+                          {vName && vName !== vQtyStr && (
+                              <Text 
+                                  numberOfLines={2} 
+                                  style={[styles.variantName, isActive && styles.variantTextActive]}
+                              >
+                                  {vName}
+                              </Text>
+                          )}
+                          
+                          {/* Middle: Price */}
+                          <View style={styles.variantPriceRow}>
+                              <Text style={[styles.variantPrice, isActive && styles.variantTextActive]}>₹{vPrice}</Text>
+                              {vMrp > 0 && <Text style={styles.variantMrp}>₹{vMrp}</Text>}
+                          </View>
+
+                          {/* Bottom: Stock or Color */}
+                          {variant.stock <= 0 ? (
+                              <Text style={styles.variantStockOut}>Out of Stock</Text>
+                          ) : (
+                               isValidColor(variant.color_code) && (
+                                  <View style={[styles.colorDot, { backgroundColor: variant.color_code, marginTop: 4 }]} />
+                               )
                           )}
                         </TouchableOpacity>
                       );
@@ -252,18 +339,52 @@ export default function ProductDetail() {
                 </View>
               )}
 
+              {/* COUPON SECTION */}
+              <View style={styles.couponSection}>
+                  <Text style={styles.sectionTitle}>Have a Coupon?</Text>
+                  <View style={styles.couponInputContainer}>
+                      <TextInput 
+                          style={styles.couponInput}
+                          placeholder="Enter Coupon Code"
+                          placeholderTextColor="#999"
+                          value={couponCode}
+                          onChangeText={setCouponCode}
+                          autoCapitalize="characters"
+                      />
+                      <TouchableOpacity 
+                          style={styles.applyBtn} 
+                          onPress={handleApplyCoupon}
+                          disabled={applyingCoupon}
+                      >
+                          {applyingCoupon ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                              <Text style={styles.applyBtnText}>APPLY</Text>
+                          )}
+                      </TouchableOpacity>
+                  </View>
+                  {couponMsg && (
+                      <Text style={[
+                          styles.couponMessage, 
+                          couponMsg.type === 'error' ? styles.errorText : styles.successText
+                      ]}>
+                          {couponMsg.text}
+                      </Text>
+                  )}
+              </View>
+
 
               {/* INFO BADGES */}
               <View style={styles.infoRow}>
-                   {product.quantity && product.unit && (
+                   {(selectedVariant || product).quantity && (selectedVariant || product).unit && (
                       <View style={styles.infoBadge}>
                           <Ionicons name="cube-outline" size={14} color={COLORS.grey} />
-                          <Text style={styles.infoText}>{product.quantity} {product.unit}</Text>
+                          <Text style={styles.infoText}>{(selectedVariant || product).quantity} {(selectedVariant || product).unit}</Text>
                       </View>
                    )}
                    <View style={styles.infoBadge}>
                        <Ionicons name="checkmark-circle-outline" size={14} color={COLORS.grey} />
-                       <Text style={styles.infoText}>{getStockStatus(product.quantity || 10).text}</Text>
+                       <Text style={styles.infoText}>{getStockStatus((selectedVariant ? selectedVariant.stock : product.quantity) || 10).text}</Text>
                    </View>
               </View>
 
@@ -293,7 +414,7 @@ export default function ProductDetail() {
         <View style={[styles.footer, { paddingBottom: bottomSpace > 0 ? bottomSpace : 20 }]}>
             <View style={styles.footerPriceBlock}>
                  <Text style={styles.footerPriceLabel}>Total Price</Text>
-                 <Text style={styles.footerPrice}>₹{sellingPrice}</Text>
+                 <Text style={styles.footerPrice}>₹{finalPrice}</Text>
             </View>
 
             <TouchableOpacity style={styles.addToCartBtn} activeOpacity={0.8} onPress={handleAddToCart}>
@@ -482,34 +603,111 @@ const styles = StyleSheet.create({
       marginBottom: 12,
   },
   variantChip: {
-      paddingHorizontal: 16,
+      minWidth: 100, // Wider for description
+      paddingHorizontal: 12,
       paddingVertical: 10,
-      borderRadius: 12,
+      borderRadius: 8, // Slightly softer boxy
       borderWidth: 1,
       borderColor: '#E0E0E0',
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
       gap: 6,
       backgroundColor: '#fff',
   },
   variantChipActive: {
       borderColor: COLORS.primary,
-      backgroundColor: COLORS.lilac,
+      backgroundColor: '#f0f9ff',
+      borderWidth: 1.5,
   },
-  variantText: {
+  variantTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: '800',
       color: COLORS.textDark,
   },
-  variantTextActive: {
-      color: COLORS.primaryDark,
+  variantName: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: COLORS.grey,
+      marginBottom: 2,
   },
-  colorDot: {
-      width: 12, 
-      height: 12, 
-      borderRadius: 6, 
-      borderWidth: 1, 
-      borderColor: 'rgba(0,0,0,0.1)' 
+  variantPriceRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 4,
+  },
+  variantPrice: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.textDark,
+  },
+  variantMrp: {
+      fontSize: 10,
+      textDecorationLine: 'line-through',
+      color: COLORS.grey,
+  },
+  variantStockOut: {
+      fontSize: 10,
+      color: STATUS_COLORS.red,
+      fontWeight: '600',
+  },
+   priceRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 10,
+      marginBottom: 20,
+  },
+  
+  /* Coupon */
+  couponSection: {
+      marginBottom: 20,
+      backgroundColor: '#F9F9F9',
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#F0F0F0',
+  },
+  couponInputContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 8,
+  },
+  couponInput: {
+      flex: 1,
+      height: 48,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      fontSize: 14,
+      color: COLORS.textDark,
+      fontWeight: '600',
+  },
+  applyBtn: {
+      width: 80,
+      height: 48,
+      backgroundColor: COLORS.textDark,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  applyBtnText: {
+      color: '#fff',
+      fontSize: 12,
+      fontWeight: 'bold',
+      letterSpacing: 1,
+  },
+  couponMessage: {
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: 4,
+  },
+  successText: {
+      color: STATUS_COLORS.green,
+  },
+  errorText: {
+      color: STATUS_COLORS.red,
   },
 
   /* Info Badges */

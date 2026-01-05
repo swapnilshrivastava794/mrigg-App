@@ -10,7 +10,7 @@ import { useCart } from "../contexts/CartContext";
 export default function Cart() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, coupon, removeCoupon } = useCart();
 
   const increaseQty = (id) => {
     updateQuantity(id, 1);
@@ -75,9 +75,6 @@ export default function Cart() {
                             
                             <View style={styles.priceRow}>
                                 <Text style={styles.price}>₹{item.price.toFixed(0)}</Text>
-                                {/* Placeholder for original price if we had it */}
-                                {/* <Text style={styles.originalPrice}>₹{(item.price * 1.2).toFixed(0)}</Text> 
-                                <Text style={styles.discountText}>20% off</Text> */}
                             </View>
                           </View>
                       </View>
@@ -114,6 +111,25 @@ export default function Cart() {
                   ))}
               </View>
 
+              {/* Coupon Applied Card */}
+              {coupon && (
+                  <View style={styles.couponCard}>
+                      <View style={styles.couponHeader}>
+                          <Ionicons name="pricetag" size={20} color={COLORS.primary} />
+                          <Text style={styles.couponTitle}>Coupon Applied</Text>
+                      </View>
+                      <View style={styles.couponRow}>
+                          <Text style={styles.couponCode}>{coupon.code}</Text>
+                          <TouchableOpacity onPress={removeCoupon}>
+                              <Text style={styles.removeCouponText}>Remove</Text>
+                          </TouchableOpacity>
+                      </View>
+                      <Text style={styles.couponSavings}>
+                          You saved ₹{coupon.discount_amount || 0} with this coupon!
+                      </Text>
+                  </View>
+              )}
+
               {/* Price Details Section */}
               <View style={styles.priceDetailsCard}>
                   <Text style={styles.sectionTitle}>Price Details</Text>
@@ -124,10 +140,18 @@ export default function Cart() {
                       <Text style={styles.priceValue}>₹{totalAmount.toFixed(0)}</Text>
                   </View>
                   
-                  <View style={styles.priceRowDetail}>
+                  {coupon && (
+                      <View style={styles.priceRowDetail}>
+                          <Text style={styles.priceLabel}>Coupon Discount</Text>
+                          <Text style={[styles.priceValue, { color: 'green' }]}>
+                              - ₹{coupon.discount_amount || 0}
+                          </Text>
+                      </View>
+                  )}
+                  {/* <View style={styles.priceRowDetail}>
                       <Text style={styles.priceLabel}>Discount</Text>
                       <Text style={[styles.priceValue, { color: 'green' }]}>- ₹0</Text>
-                  </View>
+                  </View> */}
 
                   <View style={styles.priceRowDetail}>
                       <Text style={styles.priceLabel}>Delivery Charges</Text>
@@ -138,11 +162,17 @@ export default function Cart() {
                   
                   <View style={styles.totalRow}>
                       <Text style={styles.totalLabel}>Total Amount</Text>
-                      <Text style={styles.totalValue}>₹{totalAmount.toFixed(0)}</Text>
+                      <Text style={styles.totalValue}>
+                          ₹{coupon ? (Number(coupon.new_total) || (totalAmount - (coupon.discount_amount||0))).toFixed(0) : totalAmount.toFixed(0)}
+                      </Text>
                   </View>
                   
                   <View style={[styles.divider, { marginVertical: 12 }]} />
-                  <Text style={styles.savingsText}>You will save ₹0 on this order</Text>
+                  {coupon && (
+                      <Text style={styles.savingsText}>
+                          You will save ₹{coupon.discount_amount || 0} on this order
+                      </Text>
+                  )}
               </View>
               
               <View style={styles.safeFooterSpacer} />
@@ -151,8 +181,10 @@ export default function Cart() {
             {/* Sticky Bottom Bar */}
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 }]}>
               <View style={styles.totalContainer}>
-                <Text style={styles.strikeThroughTotal}>₹{totalAmount.toFixed(0)}</Text>
-                <Text style={styles.finalTotal}>₹{totalAmount.toFixed(0)}</Text>
+                {coupon && <Text style={styles.strikeThroughTotal}>₹{totalAmount.toFixed(0)}</Text>}
+                <Text style={styles.finalTotal}>
+                    ₹{coupon ? (Number(coupon.new_total) || (totalAmount - (coupon.discount_amount||0))).toFixed(0) : totalAmount.toFixed(0)}
+                </Text>
                 <Text style={styles.viewDetailsText}>View price details</Text>
               </View>
 
@@ -478,4 +510,48 @@ const styles = StyleSheet.create({
       fontSize: 16,
       fontWeight: '600',
   },
+  
+  /* Coupon Card */
+  couponCard: {
+      backgroundColor: '#fff',
+      padding: 16,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: '#E0E0E0', // Optional border
+      borderLeftWidth: 4,
+      borderLeftColor: 'green',
+  },
+  couponHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+  },
+  couponTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.textDark,
+  },
+  couponRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+  },
+  couponCode: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: COLORS.textDark,
+      letterSpacing: 1,
+  },
+  removeCouponText: {
+      color: 'red',
+      fontWeight: '600',
+      fontSize: 12,
+  },
+  couponSavings: {
+      fontSize: 12,
+      color: 'green',
+      fontWeight: '600',
+  }
 });
