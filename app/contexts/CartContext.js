@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState } from "react";
-import { applyCoupon } from "../server"; // Import API
+import { applyCoupon } from "../server";
 
 const CartContext = createContext();
 
@@ -33,29 +33,25 @@ export const CartProvider = ({ children }) => {
                   cart_total: currentTotal
               });
 
-              // Update coupon with new values (discount might have changed)
+              // Update coupon with new values
                setCoupon(prev => ({
                    ...prev,
                    ...res,
-                   code: coupon.code // ensure code persists
+                   code: coupon.code
                }));
                AsyncStorage.setItem("coupon", JSON.stringify({ ...coupon, ...res }));
 
           } catch (error) {
               console.log("Coupon no longer valid:", error);
-              // Coupon became invalid (e.g. total dropped below threshold)
               removeCoupon();
-              // Optional: Toast "Coupon removed as criteria not met"
           }
       };
 
-      // Debounce slightly to avoid rapid API calls during rapid qty updates
       const timer = setTimeout(() => {
           if (coupon) validateCoupon();
       }, 500);
 
       return () => clearTimeout(timer);
-
   }, [cartItems]);
 
   const loadCart = async () => {
@@ -104,39 +100,40 @@ export const CartProvider = ({ children }) => {
     setCartItems((prevItems) => {
       const itemId = variant ? variant.id : product.id;
       const existingItemIndex = prevItems.findIndex((item) => {
-        // Simple logic: if same product ID and same variant ID (if exists)
         const isSameProduct = item.productId === product.id;
         const isSameVariant = variant ? item.variantId === variant.id : !item.variantId;
         return isSameProduct && isSameVariant;
       });
 
+      let newItems;
       if (existingItemIndex > -1) {
-        // Item exists, update quantity
-        const newItems = [...prevItems];
-        newItems[existingItemIndex].qty += 1;
-        saveCart(newItems);
-        return newItems;
+        // Item exists, update quantity immutably
+        newItems = prevItems.map((item, index) => {
+            if (index === existingItemIndex) {
+                 return { ...item, qty: item.qty + 1 };
+            }
+            return item;
+        });
       } else {
         // New item
-        // Normalize data structure
         const newItem = {
-            id: itemId, // Unique ID for the cart item (simplification)
+            id: itemId,
             productId: product.id,
             variantId: variant?.id,
             name: product.name,
             variantName: variant?.name,
-            brand: product.brand || "", // Assuming product might have brand
-            image: product.images?.[0]?.image || "", // Fallback
+            brand: product.brand || "",
+            image: product.images?.[0]?.image || "",
             qty: 1,
             price: variant ? (Number(variant.offerprice) > 0 ? Number(variant.offerprice) : Number(variant.price_modifier) > 0 ? Number(variant.price_modifier) : Number(product.final_price)) : Number(product.final_price),
-            // Store original objects if needed later
             _product: product,
             _variant: variant
         };
-        const newItems = [...prevItems, newItem];
-        saveCart(newItems);
-        return newItems;
+        newItems = [...prevItems, newItem];
       }
+      
+      saveCart(newItems);
+      return newItems;
     });
   };
 
@@ -152,7 +149,7 @@ export const CartProvider = ({ children }) => {
   // Clear Cart
   const clearCart = () => {
     setCartItems([]);
-    setCoupon(null); // Also clear coupon? Usually yes.
+    setCoupon(null);
     saveCart([]);
     AsyncStorage.removeItem("coupon");
   };
@@ -163,7 +160,11 @@ export const CartProvider = ({ children }) => {
         const newItems = prev.map(item => {
             if (item.id === cartItemId) {
                 const newQty = item.qty + change;
-                if (newQty < 1) return item; // limit to 1
+                if (newQty < 1) return item; 
+                // Return new object with updated qty
+                // NOTE: If couponDiscount depends on qty, it should ideally be recalculated here or in an effect.
+                // For now, we assume simple percentage or fixed coupons might need re-validation, 
+                // but we preserve the code so it doesn't disappear.
                 return { ...item, qty: newQty };
             }
             return item;

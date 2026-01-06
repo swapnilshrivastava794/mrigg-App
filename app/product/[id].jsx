@@ -3,18 +3,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Image,
-  Keyboard,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Image,
+    Keyboard,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -52,7 +52,7 @@ const getVariantFinalPrice = (variant, product) => {
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams();
-  const { addToCart, applyCouponToCart } = useCart();
+  const { addToCart, applyCouponToCart, cartItems } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -73,6 +73,11 @@ export default function ProductDetail() {
 
   const scrollViewRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Animation Refs for Add to Cart
+  const flyAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [isFlying, setIsFlying] = useState(false);
 
   useEffect(() => {
     if (id) fetchProduct();
@@ -157,10 +162,33 @@ export default function ProductDetail() {
       });
       return;
     }
-    // If a coupon was successfully applied, it is already stored in Context via handleApplyCoupon
-    // We just proceed to add item
+    
+    // Trigger Animation
+    triggerAddToCartAnimation();
+
     addToCart(product, selectedVariant);
-    alert("Added to cart!");
+    // Removed alert to rely on animation feedback
+  };
+
+  const triggerAddToCartAnimation = () => {
+      setIsFlying(true);
+      flyAnim.setValue({ x: width / 2 - 25, y: Dimensions.get('window').height - 100 }); // Start near bottom button
+      scaleAnim.setValue(1);
+
+      Animated.parallel([
+          Animated.timing(flyAnim, {
+              toValue: { x: width - 60, y: 30 }, // Target: Top Right Cart Icon
+              duration: 800,
+              useNativeDriver: true, // Use false if layout issues occur, but true is smoother
+          }),
+          Animated.timing(scaleAnim, {
+              toValue: 0.2,
+              duration: 800,
+              useNativeDriver: true,
+          })
+      ]).start(() => {
+          setIsFlying(false);
+      });
   };
 
   const handleApplyCoupon = async () => {
@@ -221,6 +249,11 @@ export default function ProductDetail() {
                  </TouchableOpacity>
                  <TouchableOpacity style={styles.actionBtn} onPress={()=> router.push('/(tabs)/cart')}>
                      <Ionicons name="cart-outline" size={24} color={COLORS.textDark} />
+                     {cartItems.length > 0 && (
+                         <View style={styles.badge}>
+                             <Text style={styles.badgeText}>{cartItems.length}</Text>
+                         </View>
+                     )}
                  </TouchableOpacity>
              </View>
         </View>
@@ -424,6 +457,23 @@ export default function ProductDetail() {
         </View>
 
       </View>
+      
+      {/* Flying Animation Element */}
+      {isFlying && (
+          <Animated.Image 
+              source={{ uri: product?.images?.[0]?.image || 'https://via.placeholder.com/50' }}
+              style={[
+                  styles.flyingImage,
+                  {
+                      transform: [
+                          { translateX: flyAnim.x },
+                          { translateY: flyAnim.y },
+                          { scale: scaleAnim }
+                      ]
+                  }
+              ]}
+          />
+      )}
     </>
   );
 }
@@ -444,6 +494,37 @@ const styles = StyleSheet.create({
   container: {
       flex: 1,
       backgroundColor: '#fff', // Clean white background for details
+  },
+  
+  /* Flying Image Animation */
+  flyingImage: {
+      position: 'absolute',
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      zIndex: 9999,
+      backgroundColor: COLORS.primary, // fallback
+  },
+
+  /* Cart Badge */
+  badge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      backgroundColor: STATUS_COLORS.red,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 4,
+      borderWidth: 1.5,
+      borderColor: '#fff',
+  },
+  badgeText: {
+      fontSize: 10,
+      fontWeight: 'bold',
+      color: '#fff',
   },
   
   /* Header */

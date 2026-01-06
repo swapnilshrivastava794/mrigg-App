@@ -17,9 +17,7 @@ export default function ConfirmOrderScreen() {
     0
   );
 
-  const finalTotal = coupon 
-    ? (Number(coupon.new_total) || (totalAmount - (coupon.discount_amount || 0)))
-    : totalAmount;
+  const finalTotal = coupon ? (Number(coupon.new_total) || (totalAmount - (coupon.discount_amount||0))) : totalAmount;
 
   const handlePayNow = () => {
     router.push({
@@ -86,8 +84,8 @@ export default function ConfirmOrderScreen() {
 
             {coupon && (
                 <View style={styles.billRow}>
-                    <Text style={styles.billLabel}>Coupon Discount</Text>
-                    <Text style={[styles.billValue, { color: '#059669' }]}>- ₹{coupon.discount_amount}</Text>
+                    <Text style={styles.billLabel}>Coupon Discount ({coupon.code})</Text>
+                    <Text style={[styles.billValue, { color: '#059669' }]}>- ₹{(coupon.discount_amount || 0).toFixed(2)}</Text>
                 </View>
             )}
 

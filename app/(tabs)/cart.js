@@ -2,7 +2,8 @@ import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors"; // 💜 GLOBAL COLORS
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCart } from "../contexts/CartContext";
@@ -10,7 +11,49 @@ import { useCart } from "../contexts/CartContext";
 export default function Cart() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { cartItems, removeFromCart, updateQuantity, coupon, removeCoupon } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, coupon, removeCoupon, applyCouponToCart } = useCart();
+  const [couponCode, setCouponCode] = useState("");
+  const [loadingCoupon, setLoadingCoupon] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setLoadingCoupon(true);
+    try {
+        // Calculate total context
+        const currentTotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+        // Call API directly for initial check or use context if it wraps it
+        // The context exposes 'applyCouponToCart' which expects the full coupon object or we might need to validate first
+        // Let's use the API directly here to get the Coupon Object, then save it to Context
+        
+        // Wait, Context usually handles this.
+        // Let's verify what applyCouponToCart does in Context.
+        // in Step 100: applyCouponToCart(couponData) -> setCoupon(couponData); save to storage.
+        // So we need to validate against server HERE in the UI, then pass result to Context.
+        
+        const { applyCoupon } = require("../server"); // Dynamic import to avoid circular dep if any, or just import at top. 
+        // Better: import at top, but verify if it's there. server is usually safe.
+        // Ideally we should move this logic to Context "applyCoupon(code)" but context currently has "applyCouponToCart(obj)".
+        // Let's stick to valid server call here.
+        
+        const res = await applyCoupon({
+            code: couponCode,
+            cart_total: currentTotal
+        });
+
+        if (res && res.discount_amount) {
+            applyCouponToCart({ ...res, code: couponCode });
+            setCouponCode("");
+        } else {
+             alert("Invalid Coupon");
+        }
+
+    } catch (error) {
+        console.log(error);
+        alert(error?.detail || "Invalid Coupon Code");
+    } finally {
+        setLoadingCoupon(false);
+    }
+  };
 
   const increaseQty = (id) => {
     updateQuantity(id, 1);
@@ -111,24 +154,64 @@ export default function Cart() {
                   ))}
               </View>
 
-              {/* Coupon Applied Card */}
-              {coupon && (
-                  <View style={styles.couponCard}>
-                      <View style={styles.couponHeader}>
-                          <Ionicons name="pricetag" size={20} color={COLORS.primary} />
-                          <Text style={styles.couponTitle}>Coupon Applied</Text>
+
+
+              {/* Coupon Section - Global */}
+              {!coupon ? (
+                  <View style={styles.couponSection}>
+                      <View style={styles.couponSectionHeader}>
+                          <Ionicons name="pricetag" size={18} color={COLORS.textDark} />
+                          <Text style={styles.couponSectionTitle}>Coupons</Text>
                       </View>
-                      <View style={styles.couponRow}>
-                          <Text style={styles.couponCode}>{coupon.code}</Text>
-                          <TouchableOpacity onPress={removeCoupon}>
-                              <Text style={styles.removeCouponText}>Remove</Text>
+                      
+                      <View style={styles.couponInputWrapper}>
+                          <View style={styles.couponInputContainer}>
+                              <TextInput 
+                                  style={styles.couponInput}
+                                  placeholder="Enter Coupon Code"
+                                  placeholderTextColor="#999"
+                                  value={couponCode}
+                                  onChangeText={setCouponCode}
+                                  autoCapitalize="characters"
+                              />
+                          </View>
+                          <TouchableOpacity 
+                              style={styles.applyBtn}
+                              onPress={handleApplyCoupon}
+                              disabled={!couponCode || loadingCoupon}
+                          >
+                              <Text style={[styles.applyBtnText, !couponCode && { opacity: 0.5 }]}>
+                                  {loadingCoupon ? "..." : "APPLY"}
+                              </Text>
                           </TouchableOpacity>
                       </View>
-                      <Text style={styles.couponSavings}>
-                          You saved ₹{coupon.discount_amount || 0} with this coupon!
-                      </Text>
+                  </View>
+              ) : (
+                  /* Coupon Applied Card */
+                  /* Coupon Applied Card */
+                  <View style={styles.couponSection}>
+                      <View style={styles.couponSectionHeader}>
+                          <Ionicons name="pricetag" size={18} color={COLORS.textDark} />
+                          <Text style={styles.couponSectionTitle}>Coupons</Text>
+                      </View>
+                      
+                      <View style={styles.couponAppliedContainer}>
+                          <View style={styles.couponAppliedRow}>
+                              <View style={styles.couponCodeBadge}>
+                                  <Text style={styles.couponCodeText}>{coupon.code}</Text>
+                              </View>
+                              <TouchableOpacity onPress={removeCoupon}>
+                                  <Text style={styles.removeCouponText}>Remove</Text>
+                              </TouchableOpacity>
+                          </View>
+                          <Text style={styles.couponSavingsText}>
+                             You saved <Text style={{fontWeight:'700'}}>₹{coupon.discount_amount || 0}</Text> with this coupon
+                          </Text>
+                      </View>
                   </View>
               )}
+
+
 
               {/* Price Details Section */}
               <View style={styles.priceDetailsCard}>
@@ -511,47 +594,97 @@ const styles = StyleSheet.create({
       fontWeight: '600',
   },
   
-  /* Coupon Card */
-  couponCard: {
-      backgroundColor: '#fff',
+  /* Coupon Section */
+  couponSection: {
+      backgroundColor: COLORS.white,
       padding: 16,
       marginBottom: 10,
-      borderWidth: 1,
-      borderColor: '#E0E0E0', // Optional border
-      borderLeftWidth: 4,
-      borderLeftColor: 'green',
   },
-  couponHeader: {
+  couponSectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      marginBottom: 8,
+      marginBottom: 12,
   },
-  couponTitle: {
-      fontSize: 14,
-      fontWeight: '700',
+  couponSectionTitle: {
+      fontSize: 15,
+      fontWeight: '600',
       color: COLORS.textDark,
   },
-  couponRow: {
+  couponInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+  },
+  couponInputContainer: {
+      flex: 1,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: '#E0E0E0', 
+      borderRadius: 4,
+      paddingHorizontal: 12,
+      height: 44,
+      justifyContent: 'center',
+  },
+  couponInput: {
+      fontSize: 14,
+      color: COLORS.textDark,
+      height: '100%',
+  },
+  applyBtn: {
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 4,
+  },
+  applyBtnText: {
+      color: COLORS.primaryDark,
+      fontWeight: '700',
+      fontSize: 14,
+      letterSpacing: 0.5,
+  },
+
+  /* Coupon Applied State */
+  couponAppliedContainer: {
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      borderRadius: 4,
+      padding: 12,
+      backgroundColor: '#F9F9F9',
+  },
+  couponAppliedRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 4,
+      marginBottom: 8,
   },
-  couponCode: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: COLORS.textDark,
-      letterSpacing: 1,
+  couponCodeBadge: {
+      borderStyle: 'dashed',
+      borderWidth: 1,
+      borderColor: '#4CAF50', // Green dashed border
+      backgroundColor: '#E8F5E9', // Light green bg
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+  },
+  couponCodeText: {
+      color: '#2E7D32',
+      fontWeight: '700',
+      fontSize: 13,
+      letterSpacing: 0.5,
   },
   removeCouponText: {
-      color: 'red',
+      color: '#D32F2F', // Red for remove
       fontWeight: '600',
-      fontSize: 12,
+      fontSize: 13,
   },
-  couponSavings: {
-      fontSize: 12,
-      color: 'green',
-      fontWeight: '600',
-  }
+  couponSavingsText: {
+      fontSize: 13,
+      color: '#4CAF50',
+      fontWeight: '500',
+  },
+
+  
+  /* Item Level Coupon */
+
 });
