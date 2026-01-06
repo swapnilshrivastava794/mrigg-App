@@ -1,3 +1,4 @@
+import ProductDetailSkeleton from "@/components/ProductDetailSkeleton"; // Import Skeleton
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -16,6 +17,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import Reanimated from "react-native-reanimated";
 import RenderHTML from "react-native-render-html";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
@@ -122,9 +124,10 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+        <>
+           <Stack.Screen options={{ headerShown: false }} />
+           <ProductDetailSkeleton />
+        </>
     );
   }
 
@@ -271,9 +274,18 @@ export default function ProductDetail() {
               onScroll={handleScroll}
               scrollEventThrottle={16}
             >
-              {product.images?.map((img) => (
+              {product.images?.map((img, index) => (
                 <View key={img.id} style={styles.imageSlide}>
-                  <Image source={{ uri: img.image }} style={styles.image} resizeMode="cover" />
+                  {index === 0 ? (
+                      <Reanimated.Image 
+                        source={{ uri: img.image }} 
+                        style={styles.image} 
+                        resizeMode="cover" 
+                        sharedTransitionTag={`product-${product.id}`}
+                      />
+                  ) : (
+                      <Image source={{ uri: img.image }} style={styles.image} resizeMode="cover" />
+                  )}
                 </View>
               ))}
             </ScrollView>
@@ -542,26 +554,34 @@ const styles = StyleSheet.create({
       zIndex: 10,
   },
   backBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(255,255,255,0.9)',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: COLORS.white, // Solid white looks cleaner than rgba
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 2,
+      elevation: 4, // Higher float
+      shadowColor: "#000",
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.1, 
+      shadowRadius: 4,
   },
   headerActions: {
       flexDirection: 'row',
       gap: 12,
   },
   actionBtn: {
-      width: 40,
-      height: 40, 
-      borderRadius: 20,
-      backgroundColor: 'rgba(255,255,255,0.9)',
+      width: 44,
+      height: 44, 
+      borderRadius: 22,
+      backgroundColor: COLORS.white,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 2,
+      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.1, 
+      shadowRadius: 4,
   },
 
   /* Carousel */
@@ -634,22 +654,24 @@ const styles = StyleSheet.create({
       fontWeight: '700',
   },
   productTitle: {
-      fontSize: 24,
-      fontWeight: '800',
+      fontSize: 26, // Larger
+      fontWeight: '700', // Slightly lighter than 800 for elegance
       color: COLORS.textDark,
-      lineHeight: 32,
+      lineHeight: 34,
       marginBottom: 12,
+      letterSpacing: -0.5,
   },
   priceRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      gap: 10,
-      marginBottom: 20,
+      gap: 12, // More space
+      marginBottom: 24, // More breathing room
   },
   sellingPrice: {
-      fontSize: 26,
-      fontWeight: '900',
+      fontSize: 28,
+      fontWeight: '800',
       color: COLORS.textDark,
+      letterSpacing: -1, // Tight tracking for numbers
   },
   mrp: {
       fontSize: 16,

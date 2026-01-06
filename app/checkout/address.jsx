@@ -1,14 +1,14 @@
+import AddressSkeleton from "@/components/AddressSkeleton"; // Import
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
     FlatList,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getUserAddresses } from "../server";
@@ -98,17 +98,25 @@ export default function AddressScreen() {
   return (
     <View style={styles.container}>
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primaryDark} />
-        </View>
+        <AddressSkeleton />
       ) : (
         <View style={{ flex: 1 }}>
           <FlatList
             data={addresses}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
-            contentContainerStyle={[styles.listContent, { paddingBottom: 120 }]}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 140 }]}
             showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+                <TouchableOpacity
+                    style={styles.addBtnHeader}
+                    onPress={() => router.push("/checkout/add-address")}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="add" size={24} color={COLORS.primaryDark} />
+                    <Text style={styles.addBtnTextHeader}>Add a new address</Text>
+                </TouchableOpacity>
+            }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="location-outline" size={64} color="#E0E0E0" />
@@ -116,16 +124,7 @@ export default function AddressScreen() {
                 <Text style={styles.emptySubText}>Add a delivery address to check out.</Text>
               </View>
             }
-            ListFooterComponent={
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => router.push("/checkout/add-address")}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="add-circle" size={24} color={COLORS.primaryDark} />
-                <Text style={styles.addBtnText}>Add New Address</Text>
-              </TouchableOpacity>
-            }
+            ListFooterComponent={<View />}
           />
         </View>
       )}
@@ -161,17 +160,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     padding: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowOffset: {width: 0, height: 4},
-    shadowRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#F0F0F0", // Flat border
   },
   selectedCard: {
-    borderColor: COLORS.primaryDark,
-    backgroundColor: COLORS.white,
+    borderColor: "#6233B5", // Primary Color
+    backgroundColor: "#F8F5FF", // Very light purple tint
+    borderWidth: 2,
   },
   headerRow: {
     flexDirection: "row",
@@ -233,23 +228,23 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginTop: 8,
   },
-  addBtn: {
+  addBtnHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#EFF6FF", // Light Blue
+    backgroundColor: "#fff", 
     padding: 16,
-    borderRadius: 14,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed'
+    borderRadius: 12, // slightly sharper than cards
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: {width: 0, height: 2},
   },
-  addBtnText: {
-    fontSize: 15,
+  addBtnTextHeader: {
+    fontSize: 16,
     fontWeight: "700",
     color: COLORS.primaryDark,
-    marginLeft: 10,
+    marginLeft: 12,
   },
   footer: {
     position: "absolute",

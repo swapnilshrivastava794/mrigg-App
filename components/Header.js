@@ -65,10 +65,10 @@ export default function Header() {
         {/* Search */}
         <View style={{ flex: 1 }}>
           <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color="#666" />
+            <Ionicons name="search-outline" size={20} color="#999" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search..."
+              placeholder="Search for products..."
               placeholderTextColor="#999"
               value={query}
               onChangeText={setQuery}
@@ -130,17 +130,19 @@ export default function Header() {
                     >
                     <Image source={{ uri: item.image }} style={styles.thumb} />
 
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
                         <Text numberOfLines={1} style={styles.name}>
                         {item.name}
                         </Text>
 
                         <Text style={styles.category}>
-                        {item.subcategory?.name}
+                        {item.subcategory?.name || "Collection"}
                         </Text>
 
                         <Text style={styles.price}>₹{item.final_price}</Text>
                     </View>
+                    
+                    <Ionicons name="chevron-forward" size={16} color="#ccc" />
                     </TouchableOpacity>
                 ))}
                 </ScrollView>
@@ -196,13 +198,13 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "#F4F6F8",
-    borderRadius: 12, // More rounded
+    gap: 10,
+    backgroundColor: "#F8F9FA", // Lighter grey
+    borderRadius: 12,
     paddingHorizontal: 12,
-    height: 42,
+    height: 44, // Slightly taller
     borderWidth: 1,
-    borderColor: "#E8E8E8", // Subtle border
+    borderColor: "#Eef1f5",
   },
   searchInput: {
     flex: 1,
@@ -221,14 +223,16 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     maxHeight: 320,
     overflow: "hidden",
-    elevation: 10, // Higher elevation for popover feel
+    elevation: 20, // Stronger pop
     shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2, // Darker shadow for depth
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 10 },
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
 
   stateBox: {
@@ -246,32 +250,38 @@ const styles = StyleSheet.create({
 
   resultRow: {
     flexDirection: "row",
+    alignItems: 'center',
     gap: 12,
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
   thumb: {
-    width: 44,
-    height: 44,
+    width: 50, // Larger thumb
+    height: 50,
     borderRadius: 8,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#F9F9F9",
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   name: {
     fontSize: 14,
-    color: "#222",
-    fontWeight: "600",
+    color: "#333",
+    fontWeight: "600", // Semi-bold
     marginBottom: 2,
   },
   category: {
-    fontSize: 11,
-    color: "#888",
+    fontSize: 10,
+    color: "#999",
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   price: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#D4AF37", // Matching Brand Gold or Primary Color
-    marginTop: 2,
+    color: "#6233B5", // Use primary color
   },
 
   viewAll: {

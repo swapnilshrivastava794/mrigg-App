@@ -130,24 +130,28 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: COLORS.white,
-    padding: 16,
+    padding: 20, // Increased padding
     borderRadius: 16,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    borderWidth: 1,
+    borderColor: '#f0f0f0', // Invoice border
+    // Removed generic shadow for cleaner look
   },
   sectionHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 16,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F9F9F9',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#888",
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   editBtn: {
       color: COLORS.primaryDark,
@@ -183,7 +187,14 @@ const styles = StyleSheet.create({
   billRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
   billLabel: { color: "#6B7280", fontSize: 14 },
   billValue: { color: "#111827", fontSize: 14, fontWeight: "600" },
-  divider: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 12 },
+  divider: { 
+      height: 1, 
+      backgroundColor: "#E5E7EB", 
+      marginVertical: 16,
+      borderStyle: 'dashed', // Invoice feel
+      borderWidth: 1, 
+      borderColor: '#EFEFEF'
+  },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: 'flex-end'},
   totalLabel: { fontSize: 16, fontWeight: "700", color: "#111827" },
   totalValue: { fontSize: 20, fontWeight: "800", color: COLORS.primaryDark },

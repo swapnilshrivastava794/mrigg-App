@@ -1,17 +1,18 @@
+import ProductListSkeleton from "@/components/ProductListSkeleton";
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
+import Reanimated from "react-native-reanimated"; // Aliased for shared transition
 import { getProductById, getProductsByType, searchProducts } from "../server";
 
 const TITLES = {
@@ -85,8 +86,8 @@ export default function ProductList() {
 
   const renderItem = ({ item }) => {
     const image =
-      item.image ||                    // 🔍 search result
-      item.images?.[0]?.image ||        // 📂 category / type
+      item.image ||                    
+      item.images?.[0]?.image ||        
       "https://via.placeholder.com/300";
 
     const discount =
@@ -105,7 +106,12 @@ export default function ProductList() {
         onPress={() => router.push(`/product/${item.id}`)}
       >
         <View style={styles.imageContainer}>
-             <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+             <Reanimated.Image 
+                source={{ uri: image }} 
+                style={styles.image} 
+                resizeMode="cover"
+                sharedTransitionTag={`product-${item.id}`} // Hero Animation Link
+             />
              {discount > 0 && (
                 <View style={styles.badge}>
                     <Text style={styles.badgeText}>{discount}% OFF</Text>
@@ -156,7 +162,7 @@ export default function ProductList() {
         <View style={styles.container}>
             
             {/* FILTER BAR */}
-            <View style={styles.filterBar}>
+            {/* <View style={styles.filterBar}>
                 <TouchableOpacity style={styles.filterBtn}>
                     <Ionicons name="filter-outline" size={16} color={COLORS.textDark} />
                     <Text style={styles.filterText}>Filter</Text>
@@ -166,13 +172,11 @@ export default function ProductList() {
                     <Ionicons name="swap-vertical-outline" size={16} color={COLORS.textDark} />
                     <Text style={styles.filterText}>Sort By</Text>
                 </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* LIST */}
-            {loading ? (
-            <View style={styles.loader}>
-                <ActivityIndicator size="large" color={COLORS.primaryDark} />
-            </View>
+            {loading && products.length === 0 ? (
+                <ProductListSkeleton />
             ) : products.length === 0 ? (
             <View style={styles.noData}>
                 <Ionicons name="search-outline" size={48} color="#ddd" />
@@ -279,17 +283,17 @@ const styles = StyleSheet.create({
       width: "48%",
       borderRadius: 12,
       marginBottom: 16,
-      overflow: 'hidden',
-      elevation: 2,
-      shadowColor: "#000",
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      shadowOffset: {width: 0, height: 2},
+      // Premium Flat Style
+      borderWidth: 1,
+      borderColor: '#F0F0F0',
   },
   imageContainer: {
-      height: 160,
+      height: 180, // Taller images for PLP
       backgroundColor: '#f9f9f9',
       position: 'relative',
+      overflow: 'hidden',
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
   },
   image: {
       width: "100%",
@@ -301,8 +305,9 @@ const styles = StyleSheet.create({
       left: 8,
       backgroundColor: COLORS.white,
       paddingHorizontal: 6,
-      paddingVertical: 2,
+      paddingVertical: 3,
       borderRadius: 4,
+      elevation: 1,
   },
   badgeText: {
       fontSize: 10,
@@ -311,43 +316,47 @@ const styles = StyleSheet.create({
   },
 
   infoContainer: {
-      padding: 10,
+      padding: 12,
   },
   brandName: {
       fontSize: 10,
-      color: COLORS.grey,
+      color: '#999',
       fontWeight: '700',
       textTransform: 'uppercase',
-      marginBottom: 2,
+      letterSpacing: 0.5,
+      marginBottom: 4,
   },
   name: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '500',
       color: COLORS.textDark,
       lineHeight: 18,
       height: 36, // 2 lines
+      marginBottom: 6,
   },
   priceRow: {
       flexDirection: 'row',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: 8,
+      marginTop: 2,
   },
   price: {
-      fontSize: 15,
-      fontWeight: "800",
+      fontSize: 16, // Pro size
+      fontWeight: "700",
       color: COLORS.textDark,
+      letterSpacing: -0.3,
   },
   mrp: {
       fontSize: 11,
       textDecorationLine: "line-through",
       color: COLORS.grey,
+      marginLeft: 4,
   },
   addBtn: {
       backgroundColor: COLORS.primaryDark,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
   },

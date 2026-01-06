@@ -1,10 +1,10 @@
+import OrderListSkeleton from "@/components/OrderListSkeleton";
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
     FlatList,
     Image,
     RefreshControl,
@@ -12,7 +12,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import { getOrders } from "../server";
 
@@ -178,9 +178,7 @@ export default function Orders() {
         </View>
 
         {loading && !refreshing && orders.length === 0 ? (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <OrderListSkeleton />
         ) : (
             <FlatList
                 data={orders}
@@ -216,35 +214,33 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.white,
-    paddingBottom: 12,
+    paddingBottom: 16,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    zIndex: 10,
+    paddingTop: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: 24,
+      fontWeight: '700',
       color: COLORS.textDark,
-      marginBottom: 12,
+      marginBottom: 16,
+      letterSpacing: -0.5,
   },
   searchContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#F0F5FF',
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      height: 40,
+      backgroundColor: '#F9F9F9',
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 48,
       borderWidth: 1,
-      borderColor: '#E6E6E6'
+      borderColor: '#EFEFEF'
   },
   searchInput: {
       flex: 1,
-      marginLeft: 8,
-      fontSize: 14,
+      marginLeft: 10,
+      fontSize: 15,
       color: COLORS.textDark,
   },
   filterContainer: {
@@ -281,71 +277,71 @@ const styles = StyleSheet.create({
   },
   card: {
       backgroundColor: COLORS.white,
-      marginBottom: 12,
-      borderRadius: 8,
+      marginBottom: 16,
+      borderRadius: 16, // Softer corners
       padding: 16,
-      elevation: 2,
-      shadowColor: "#000", 
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      shadowOffset: {width:0, height: 1}
+      borderWidth: 1,
+      borderColor: '#F0F0F0', // Flat border
   },
   cardHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 12,
+      alignItems: 'center',
+      marginBottom: 16,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F9F9F9',
   },
   statusRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      backgroundColor: '#FAFAFA',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 20,
   },
   statusText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
+      letterSpacing: 0.5,
   },
   dateText: {
       fontSize: 12,
-      color: COLORS.grey,
+      color: '#999',
+      fontWeight: '500',
   },
   productRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center', // Center vertically
   },
   imageWrapper: {
-      width: 60,
-      height: 60,
+      width: 70,
+      height: 70,
       borderWidth: 1,
       borderColor: '#f0f0f0',
-      borderRadius: 4,
-      marginRight: 12,
-      padding: 2,
+      borderRadius: 8,
+      marginRight: 16,
+      padding: 0,
       backgroundColor: '#f9f9f9',
-  },
-  image: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'contain',
-  },
-  details: {
-      flex: 1,
-      justifyContent: 'center',
+      overflow: 'hidden',
   },
   productName: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '600',
       color: COLORS.textDark,
       marginBottom: 4,
   },
   productDesc: {
       fontSize: 12,
-      color: COLORS.grey,
-      marginBottom: 4
+      color: '#888',
+      marginBottom: 6
   },
   priceText: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '700',
       color: COLORS.textDark,
+      letterSpacing: -0.3,
   },
   actionRow: {
       flexDirection: 'row',

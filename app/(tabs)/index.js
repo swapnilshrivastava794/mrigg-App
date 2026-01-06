@@ -1,3 +1,4 @@
+import HomeSkeleton from "@/components/HomeSkeleton";
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -5,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated from "react-native-reanimated";
 import Carousel from "react-native-reanimated-carousel";
 import { getBanners, getCategories, getHomeProducts } from "../server";
 
@@ -17,6 +19,7 @@ export default function Home() {
   const [liked, setLiked] = useState({});
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true); // Loading state
 
   const [homeProducts, setHomeProducts] = useState({
     popular: [],
@@ -63,7 +66,11 @@ export default function Home() {
         activeOpacity={0.9}
       >
         <View style={styles.productImageContainer}>
-          <Image source={{ uri: image }} style={styles.productImage} />
+          <Animated.Image 
+            source={{ uri: image }} 
+            style={styles.productImage} 
+            sharedTransitionTag={`product-${item.id}`} 
+          />
 
           {/* Discount Badge */}
           {discount > 0 && (
@@ -117,10 +124,22 @@ export default function Home() {
   }
 
   useEffect(() => {
-    loadCategories();
-    loadBanners();
-    loadHomeProducts();
+    async function fetchData() {
+        setLoading(true);
+        await Promise.all([
+            loadCategories(),
+            loadBanners(),
+            loadHomeProducts()
+        ]);
+        // Artificial delay for smooth Skeleton demo (optional, remove in prod if fast)
+        setTimeout(() => setLoading(false), 800);
+    }
+    fetchData();
   }, []);
+
+  if (loading) {
+      return <Screen><HomeSkeleton /></Screen>;
+  }
 
   return (
     <Screen>
@@ -134,12 +153,12 @@ export default function Home() {
       <View style={styles.bannerContainer}>
         <Carousel
           width={screenWidth}
-          height={240}
+          height={280}
           data={banners}
           autoPlay
           loop
-          autoPlayInterval={3000}
-          scrollAnimationDuration={1000}
+          autoPlayInterval={4000}
+          scrollAnimationDuration={800}
           renderItem={({ item }) => (
             <View style={styles.bannerWrapper}>
                 <Image
@@ -148,7 +167,8 @@ export default function Home() {
                   resizeMode="cover"
                 />
                 <LinearGradient
-                  colors={["transparent", "rgba(0,0,0,0.7)"]}
+                  colors={["transparent", "rgba(0,0,0,0.2)", "rgba(0,0,0,0.9)"]}
+                  locations={[0, 0.6, 1]}
                   style={styles.bannerGradient}
                 />
                 
@@ -182,12 +202,12 @@ export default function Home() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
         >
           {categories.map((cat) => (
             <TouchableOpacity
               key={cat.id}
-              style={[styles.categoryItem, { width: ITEM_WIDTH - 8 }]}
+              style={[styles.categoryItem]}
               activeOpacity={0.8}
               onPress={() =>
                 router.push({
@@ -199,10 +219,18 @@ export default function Home() {
                 })
               }
             >
-              <View style={styles.categoryIconBox}>
-                <Image source={{ uri: cat.image }} style={styles.categoryImage} />
-              </View>
-              <Text style={styles.categoryText} numberOfLines={2}>
+              <LinearGradient
+                  colors={['#6233B5', '#8E44AD', '#9B59B6']} // Updated to user's purple theme
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 1}}
+                  style={styles.storyGradientBorder}
+              >
+                  <View style={styles.storyInnerContainer}>
+                    <Image source={{ uri: cat.image }} style={styles.categoryImage} />
+                  </View>
+              </LinearGradient>
+              
+              <Text style={styles.categoryText} numberOfLines={1}>
                 {cat.name}
               </Text>
             </TouchableOpacity>
@@ -291,13 +319,14 @@ const styles = StyleSheet.create({
       backgroundColor: '#F1F3F6', // Matching Grey Background
   },
   
-  /** Banner */
+  /** Banner (Cinematic) */
   bannerContainer: {
       marginTop: 0,
+      height: 280,
   },
   bannerWrapper: {
       width: screenWidth,
-      height: 240,
+      height: 280,
       position: 'relative',
   },
   bannerImage: {
@@ -305,96 +334,112 @@ const styles = StyleSheet.create({
       height: '100%',
   },
   bannerGradient: {
-      flex: 1,
       position: 'absolute',
-      width: '100%',
-      height: '100%',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '100%', 
   },
   bannerContent: {
       position: 'absolute',
-      bottom: 20,
+      bottom: 30,
       left: 20,
       right: 20,
+      zIndex: 10,
   },
   bannerTag: {
-      backgroundColor: '#D4AF37', // Gold
+      backgroundColor: 'rgba(255, 255, 255, 0.25)',
       alignSelf: 'flex-start',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 4,
-      marginBottom: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 100, // Pill shape
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.3)',
   },
   bannerTagText: {
-      color: COLORS.textDark,
+      color: COLORS.white,
       fontWeight: '700',
       fontSize: 10,
       textTransform: 'uppercase',
+      letterSpacing: 1,
   },
   bannerTitle: {
       color: COLORS.white,
-      fontSize: 28,
+      fontSize: 32, // Larger
       fontWeight: '800',
-      lineHeight: 32,
-      marginBottom: 4,
-      textShadowColor: 'rgba(0,0,0,0.3)',
-      textShadowOffset: {width: 0, height: 1},
-      textShadowRadius: 4,
+      lineHeight: 36,
+      marginBottom: 6,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: {width: 0, height: 2},
+      textShadowRadius: 8,
   },
   bannerSubtitle: {
-      color: '#EEE',
-      fontSize: 14,
+      color: 'rgba(255,255,255,0.9)',
+      fontSize: 15,
       fontWeight: '500',
-      marginBottom: 16,
+      marginBottom: 18,
+      lineHeight: 22,
   },
   bannerBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: COLORS.white,
       alignSelf: 'flex-start',
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 20,
-      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 22,
+      borderRadius: 30,
+      gap: 8,
+      elevation: 5,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
   },
   bannerBtnText: {
       color: COLORS.textDark,
       fontWeight: '700',
-      fontSize: 12,
+      fontSize: 13,
+      letterSpacing: 0.5,
   },
 
-  /** Categories */
+  /** Categories (Story Style) */
   categoriesSection: {
       marginTop: 20,
       marginBottom: 10,
   },
   categoryItem: {
       alignItems: 'center',
-      marginRight: 8,
+      width: 72, 
   },
-  categoryIconBox: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
+  storyGradientBorder: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 6,
+  },
+  storyInnerContainer: {
+      width: 62,
+      height: 62,
+      borderRadius: 31,
       backgroundColor: COLORS.white,
-      padding: 6,
-      marginBottom: 8,
-      elevation: 2,
-      shadowColor: "#000",
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
+      padding: 2, // Space between border and image
+      justifyContent: 'center',
+      alignItems: 'center',
   },
   categoryImage: {
       width: '100%',
       height: '100%',
-      borderRadius: 32,
+      borderRadius: 30,
       resizeMode: 'cover',
   },
   categoryText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: COLORS.textDark,
       textAlign: 'center',
-      lineHeight: 16,
   },
 
   /** Sections */
@@ -409,15 +454,16 @@ const styles = StyleSheet.create({
       marginBottom: 12,
   },
   sectionTitle: {
-      fontSize: 18,
-      fontWeight: '800',
+      fontSize: 20, // Larger
+      fontWeight: '700',
       color: COLORS.textDark,
-      letterSpacing: 0.3,
+      letterSpacing: -0.5, // Modern tight spacing
   },
   viewAllText: {
       fontSize: 13,
       fontWeight: '600',
       color: COLORS.primaryDark,
+      letterSpacing: 0.5,
   },
   horizontalList: {
       paddingHorizontal: 16,
@@ -428,14 +474,11 @@ const styles = StyleSheet.create({
   productCard: {
       backgroundColor: COLORS.white,
       width: 160,
-      borderRadius: 12,
-      marginRight: 12,
-      overflow: 'hidden',
-      elevation: 2,
-      shadowColor: "#000",
-      shadowOpacity: 0.06,
-      shadowRadius: 4,
-      shadowOffset: {width: 0, height: 2},
+      borderRadius: 16, // Softer corners
+      marginRight: 14,
+      borderWidth: 1,
+      borderColor: '#f0f0f0', // Subtle border instead of heavy shadow
+      // overflow: 'hidden', // caused shadow cutting on Android sometimes
   },
   productImageContainer: {
       height: 160,
@@ -478,28 +521,31 @@ const styles = StyleSheet.create({
   },
   productBrand: {
       fontSize: 10,
-      color: COLORS.grey,
+      color: '#999',
       fontWeight: '700',
       textTransform: 'uppercase',
-      marginBottom: 2,
+      letterSpacing: 0.5,
+      marginBottom: 3,
   },
   productName: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '500', // Lighter weight for elegance
       color: COLORS.textDark,
       lineHeight: 18,
-      height: 36, // Fixed height for 2 lines
+      height: 36, 
+      marginBottom: 6,
   },
   priceRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'flex-end',
-      marginTop: 8,
+      alignItems: 'center',
+      marginTop: 4,
   },
   productPrice: {
-      fontSize: 15,
-      fontWeight: '800',
+      fontSize: 16, // Larger price
+      fontWeight: '700',
       color: COLORS.textDark,
+      letterSpacing: -0.3,
   },
   oldPrice: {
       fontSize: 11,
