@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCart } from "../contexts/CartContext";
 
 const COLORS = {
   primary: "#7445C4",
@@ -14,6 +15,14 @@ const COLORS = {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { cartItems } = useCart();
+  
+  // Calculate total items (sum users might expect unique items or total qty, usually simple length is fine or sum of qtys)
+  // Let's rely on array length for "unique items" or reduce for "total qty". 
+  // Blinkit usually shows total items count (unique). Let's stick to unique items count (array length) or sum if preferred.
+  // User asked "kitne cart add hai", usually implies total quantity if multi-quantity is allowed, but simple length is safer to start.
+  // Let's use cartItems.length as planned.
+  const uniqueItemsCount = cartItems.length;
 
   // Fix: Ensure we always respect the safe area bottom
   // Android gesture bars often have a non-zero inset.
@@ -88,6 +97,8 @@ export default function TabLayout() {
                 color={color} 
             />
           ),
+          tabBarBadge: uniqueItemsCount > 0 ? uniqueItemsCount : null,
+          tabBarBadgeStyle: { backgroundColor: '#FF4757', color: 'white', fontSize: 10, minWidth: 16, height: 16 },
         }}
       />
       <Tabs.Screen

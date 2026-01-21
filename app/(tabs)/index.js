@@ -1,24 +1,130 @@
+import CategorySlider from "@/components/CategorySlider";
 import HomeSkeleton from "@/components/HomeSkeleton";
+import ProductQuantityButton from "@/components/ProductQuantityButton";
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect, useState } from "react";
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import Carousel from "react-native-reanimated-carousel";
-import { getBanners, getCategories, getHomeProducts } from "../server";
+import { useCart } from "../contexts/CartContext";
+import { getBanners, getCategories, getHomeProducts, getOffers } from "../server";
 
 const screenWidth = Dimensions.get("window").width;
 
 export default function Home() {
+  const { addToCart } = useCart();
   const ITEM_WIDTH = screenWidth / 4; 
+
+  const BannerItem = ({ item }) => {
+    const player = useVideoPlayer(item.video, (player) => {
+      player.loop = true;
+      player.muted = true;
+      player.play();
+    });
+
+    return (
+      <View style={styles.bannerWrapper}>
+          {item.media_type === "video" ? (
+            <VideoView
+              style={styles.bannerImage}
+              player={player}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : (
+            <Image
+              source={{ uri: item.image }}
+              style={styles.bannerImage}
+              resizeMode="cover"
+            />
+          )}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.2)", "rgba(0,0,0,0.9)"]}
+            locations={[0, 0.6, 1]}
+            style={styles.bannerGradient}
+          />
+          
+          <View style={styles.bannerContent}>
+             <View style={styles.bannerTag}>
+                 <Text style={styles.bannerTagText}>{item.deal_label}</Text>
+             </View>
+             <Text style={styles.bannerTitle} numberOfLines={2}>{item.ad_title}</Text>
+             <Text style={styles.bannerSubtitle} numberOfLines={1}>{item.ad_description}</Text>
+             
+             <TouchableOpacity 
+                  style={styles.bannerBtn}
+                  onPress={() => {
+                      if (item.redirect?.type === "product") {
+                          router.push(`/product/${item.redirect.id}`);
+                      }
+                  }}
+              >
+                 <Text style={styles.bannerBtnText}>{item.cta_text}</Text>
+                 <Ionicons name="arrow-forward" size={14} color={COLORS.textDark} />
+             </TouchableOpacity>
+          </View>
+      </View>
+    );
+  }; 
+
+  const PremiumOfferCard = ({ offer }) => {
+    if (!offer) return null;
+
+    return (
+        <TouchableOpacity 
+            activeOpacity={0.95} 
+            style={styles.premiumOfferContainer}
+            onPress={() => router.push({
+                pathname: "/product",
+                params: { 
+                    offerId: offer.id,
+                    customTitle: offer.offer_title
+                }
+            })}
+        >
+            <Image 
+                source={{ uri: offer.image }} 
+                style={styles.premiumOfferImage} 
+            />
+            
+            {/* Gradient Overlay for Text Readability */}
+            <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
+                locations={[0, 0.5, 1]}
+                style={styles.premiumOfferGradient}
+            />
+
+            <View style={styles.premiumOfferContent}>
+                <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>Limited Time Offer</Text>
+                </View>
+                
+                <Text style={styles.premiumOfferTitle} numberOfLines={2}>
+                    {offer.offer_title}
+                </Text>
+                <Text style={styles.premiumOfferDesc} numberOfLines={1}>
+                    {offer.offer_description}
+                </Text>
+
+                <View style={styles.shopNowBtn}>
+                        <Text style={styles.shopNowText}>Shop Now</Text>
+                        <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
+  }; 
 
   const [cartCount, setCartCount] = useState(3);
   const [liked, setLiked] = useState({});
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true); // Loading state
 
   const [homeProducts, setHomeProducts] = useState({
@@ -53,6 +159,8 @@ export default function Home() {
     const image =
       item.images?.length > 0
         ? item.images[0].image
+        : item.image // Fallback for Offers product structure
+        ? item.image 
         : "https://via.placeholder.com/300";
 
     const discount = Math.round(
@@ -104,9 +212,9 @@ export default function Home() {
                 <Text style={styles.productPrice}>₹{item.final_price}</Text>
                 {discount > 0 && <Text style={styles.oldPrice}>₹{item.price}</Text>}
             </View>
-            <TouchableOpacity style={styles.addBtn}>
-                 <Ionicons name="add" size={20} color={COLORS.white} />
-            </TouchableOpacity>
+            <View style={{ alignItems: 'flex-end', marginTop: 8 }}>
+                 <ProductQuantityButton item={item} />
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -123,13 +231,23 @@ export default function Home() {
     }
   }
 
+  async function loadOffers() {
+    try {
+        const res = await getOffers();
+        setOffers(res);
+    } catch (err) {
+        console.log("OFFERS API ERROR:", err);
+    }
+  }
+
   useEffect(() => {
     async function fetchData() {
         setLoading(true);
         await Promise.all([
             loadCategories(),
             loadBanners(),
-            loadHomeProducts()
+            loadHomeProducts(),
+            loadOffers()
         ]);
         // Artificial delay for smooth Skeleton demo (optional, remove in prod if fast)
         setTimeout(() => setLoading(false), 800);
@@ -140,6 +258,44 @@ export default function Home() {
   if (loading) {
       return <Screen><HomeSkeleton /></Screen>;
   }
+
+  const OfferSection = ({ offer }) => {
+    return (
+        <View style={styles.offerContainer}>
+            <View style={styles.offerHeader}>
+                <View>
+                    <Text style={styles.offerTitle}>{offer.offer_title}</Text>
+                    <Text style={styles.offerDesc}>{offer.offer_description}</Text>
+                </View>
+                {/* <TouchableOpacity>
+                    <Text style={styles.viewAllText}>View All</Text>
+                </TouchableOpacity> */}
+            </View>
+
+            {/* Offer Banner Image */}
+            <TouchableOpacity activeOpacity={0.9} style={styles.offerBannerContainer}>
+                 <Image 
+                    source={{ uri: offer.image }} 
+                    style={styles.offerBannerImage} 
+                 />
+            </TouchableOpacity>
+
+            {/* Offer Products (Horizontal Scroll) */}
+            {offer.products && offer.products.length > 0 && (
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    contentContainerStyle={styles.horizontalList}
+                    style={{ marginTop: 16 }}
+                >
+                    {offer.products.map((item) => (
+                         <ProductCard key={item.id} item={item} horizontal />
+                    ))}
+                </ScrollView>
+            )}
+        </View>
+    );
+  };
 
   return (
     <Screen>
@@ -159,40 +315,7 @@ export default function Home() {
           loop
           autoPlayInterval={4000}
           scrollAnimationDuration={800}
-          renderItem={({ item }) => (
-            <View style={styles.bannerWrapper}>
-                <Image
-                  source={{ uri: item.image }}
-                  style={styles.bannerImage}
-                  resizeMode="cover"
-                />
-                <LinearGradient
-                  colors={["transparent", "rgba(0,0,0,0.2)", "rgba(0,0,0,0.9)"]}
-                  locations={[0, 0.6, 1]}
-                  style={styles.bannerGradient}
-                />
-                
-                <View style={styles.bannerContent}>
-                   <View style={styles.bannerTag}>
-                       <Text style={styles.bannerTagText}>{item.deal_label}</Text>
-                   </View>
-                   <Text style={styles.bannerTitle} numberOfLines={2}>{item.ad_title}</Text>
-                   <Text style={styles.bannerSubtitle} numberOfLines={1}>{item.ad_description}</Text>
-                   
-                   <TouchableOpacity 
-                        style={styles.bannerBtn}
-                        onPress={() => {
-                            if (item.redirect?.type === "product") {
-                                router.push(`/product/${item.redirect.id}`);
-                            }
-                        }}
-                    >
-                       <Text style={styles.bannerBtnText}>{item.cta_text}</Text>
-                       <Ionicons name="arrow-forward" size={14} color={COLORS.textDark} />
-                   </TouchableOpacity>
-                </View>
-            </View>
-          )}
+          renderItem={({ item }) => <BannerItem item={item} />}
         />
       </View>
 
@@ -238,6 +361,19 @@ export default function Home() {
         </ScrollView>
       </View>
 
+      {/* DYNAMIC CATEGORY SLIDERS (Requested Feature) */}
+      <View style={{ marginTop: 10 }}>
+          {categories.map((cat) => (
+             <CategorySlider key={cat.id} category={cat} />
+          ))}
+      </View>
+
+      {/* OFFERS: HOME_TOP - Single Premium Card */}
+      {(() => {
+        const topOffers = offers.filter(o => o.page_position === "HOME_TOP");
+        return <PremiumOfferCard offer={topOffers[0]} />;
+      })()}
+
       {/* Latest Products Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -253,6 +389,12 @@ export default function Home() {
           ))}
         </ScrollView>
       </View>
+
+      {/* OFFERS: HOME_MIDDLE */}
+      {(() => {
+        const middleOffers = offers.filter(o => o.page_position === "HOME_MIDDLE");
+        return <PremiumOfferCard offer={middleOffers[0]} />;
+      })()}
 
 
       {/* Popular Section */}
@@ -272,24 +414,7 @@ export default function Home() {
       </View>
 
 
-      {/* Featured Banner */}
-      <TouchableOpacity style={styles.featuredBanner} activeOpacity={0.9}>
-        <Image 
-            source={{ uri: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop" }} 
-            style={styles.fbImage}
-        />
-        <LinearGradient
-            colors={["rgba(0,0,0,0.2)", "rgba(0,0,0,0.6)"]}
-            style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.fbContent}>
-            <Text style={styles.fbTitle}>Season's Best</Text>
-            <Text style={styles.fbSubtitle}>Curated collection just for you</Text>
-             <View style={styles.fbBtn}>
-                <Text style={styles.fbBtnText}>Explore Collection</Text>
-             </View>
-        </View>
-      </TouchableOpacity>
+   
 
 
       {/* Featured Products */}
@@ -307,6 +432,12 @@ export default function Home() {
           ))}
         </ScrollView>
       </View>
+
+      {/* OFFERS: HOME_BOTTOM */}
+      {(() => {
+        const bottomOffers = offers.filter(o => o.page_position === "HOME_BOTTOM");
+        return <PremiumOfferCard offer={bottomOffers[0]} />;
+      })()}
 
       </ScrollView>
     </Screen>
@@ -608,6 +739,124 @@ const styles = StyleSheet.create({
       fontSize: 12,
       fontWeight: '700',
       color: COLORS.textDark,
+  },
+
+  /** Offers Section */
+  offerContainer: {
+    marginTop: 24,
+    backgroundColor: COLORS.white,
+    paddingVertical: 16,
+    marginBottom: 8,
+  },
+  offerHeader: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  offerTitle: {
+      fontSize: 20,
+      fontWeight: '800', // Extra bold
+      color: COLORS.textDark,
+      letterSpacing: -0.5,
+  },
+  offerDesc: {
+      fontSize: 13,
+      color: COLORS.grey,
+      marginTop: 2,
+      fontWeight: '500',
+  },
+  offerBannerContainer: {
+      marginHorizontal: 16,
+      height: 180,
+      borderRadius: 16,
+      overflow: 'hidden',
+      marginBottom: 0,
+      backgroundColor: '#EEE',
+  },
+  /* Premium Offer Card */
+  premiumOfferContainer: {
+      marginHorizontal: 16,
+      marginTop: 24,
+      height: 220,
+      borderRadius: 24,
+      overflow: 'hidden',
+      position: 'relative',
+      backgroundColor: '#fff',
+      // Shadow
+      shadowColor: "#6233B5",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 8,
+  },
+  premiumOfferImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+  },
+  premiumOfferGradient: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      top: 0,
+  },
+  premiumOfferContent: {
+      position: 'absolute',
+      bottom: 20,
+      left: 20,
+      right: 20,
+  },
+  premiumBadge: {
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 100,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.4)',
+      backdropFilter: 'blur(10px)', // Works on newer iOS/web
+  },
+  premiumBadgeText: {
+      color: COLORS.white,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+  },
+  premiumOfferTitle: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: COLORS.white,
+      letterSpacing: -0.5,
+      marginBottom: 6,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: {width: 0, height: 2},
+      textShadowRadius: 4,
+  },
+  premiumOfferDesc: {
+      fontSize: 14,
+      color: 'rgba(255,255,255,0.9)',
+      marginBottom: 16,
+      fontWeight: '500',
+  },
+  shopNowBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: COLORS.primaryDark, // Or a gradient if preferred
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 16,
+      alignSelf: 'flex-start',
+      gap: 8,
+  },
+  shopNowText: {
+      color: COLORS.white,
+      fontWeight: '700',
+      fontSize: 14,
   },
 
 });

@@ -1,19 +1,21 @@
 import ProductListSkeleton from "@/components/ProductListSkeleton";
+import ProductQuantityButton from "@/components/ProductQuantityButton";
 import Screen from "@/components/Screen";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import Reanimated from "react-native-reanimated"; // Aliased for shared transition
-import { getProductById, getProductsByType, searchProducts } from "../server";
+import { useCart } from "../contexts/CartContext";
+import { getOfferById, getProductById, getProductsByType, searchProducts } from "../server";
 
 const TITLES = {
   latest: "Latest Drops",
@@ -22,11 +24,12 @@ const TITLES = {
 };
 
 export default function ProductList() {
-  const { category, categoryId, type, q  } = useLocalSearchParams();
+  const { addToCart } = useCart();
+  const { category, categoryId, type, q, offerId, customTitle } = useLocalSearchParams();
 
   const pageTitle = q
   ? `Results for "${q}"`
-  : TITLES[type] || category || "Collection";
+  : customTitle || TITLES[type] || category || "Collection";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +44,7 @@ export default function ProductList() {
     setPage(1);
     setHasMore(true);
     loadProducts(1);
-  }, [type, categoryId, q]);
+  }, [type, categoryId, q, offerId]);
 
   const loadProducts = async (pageNo) => {
     try {
@@ -55,12 +58,21 @@ export default function ProductList() {
           res = await searchProducts(q, pageNo, limit);
         }
 
-        // ✅ CASE 1: TYPE BASED
+        // ✅ CASE 2: OFFER BASED (High Priority)
+        else if (offerId) {
+             res = await getOfferById(offerId);
+             // Offer API returns { products: [...] }
+             if (res && res.products) {
+                 res = res.products; 
+             }
+        }
+
+        // ✅ CASE 3: TYPE BASED
         else if (type) {
           res = await getProductsByType(type, pageNo, limit);
         }
 
-        // ✅ CASE 2: CATEGORY BASED
+        // ✅ CASE 4: CATEGORY BASED
         else if (categoryId) {
           res = await getProductById(categoryId, pageNo, limit);
         }
@@ -133,8 +145,8 @@ export default function ProductList() {
                     {discount > 0 && <Text style={styles.mrp}>₹{item.price}</Text>}
                  </View>
                 {/* Add Button Visual Only */}
-                <View style={styles.addBtn}>
-                    <Ionicons name="add" size={16} color={COLORS.white} />
+                <View style={{ width: 80, alignItems: 'flex-end' }}>
+                    <ProductQuantityButton item={item} />
                 </View>
             </View>
         </View>

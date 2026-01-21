@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -13,8 +14,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-    Image
+    View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signup } from "../server";
@@ -210,6 +210,10 @@ export default function SignUp() {
                             <Text style={styles.btnText}>Sign Up</Text>
                         )}
                     </TouchableOpacity>
+
+                    <Text style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: '#666' }}>
+                        By signing up, you agree to our Terms & Privacy Policy.
+                    </Text>
 
                     <View style={styles.divider}>
                         <View style={styles.line} />

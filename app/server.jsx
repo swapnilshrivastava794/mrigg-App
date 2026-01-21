@@ -153,6 +153,16 @@ export const getBanners = async () => {
   return await axiosInstance.get("/api/banners/");
 };
 
+export const getOffers = async () => {
+    const res = await axiosInstance.get("/api/offers/");
+    return res.data;
+};
+
+export const getOfferById = async (id) => {
+    const res = await axiosInstance.get(`/api/offers/${id}/`);
+    return res.data;
+};
+
 
 
 
@@ -262,12 +272,29 @@ export const paymentSuccess = async (data) => {
   return res.data;
 };
 
+// RAZORPAY
+export const createRazorpayOrder = async (data) => {
+    const res = await axiosInstance.post("/api/razorpay/create-order/", data);
+    return res.data;
+};
+
+export const verifyRazorpayPayment = async (data) => {
+    const res = await axiosInstance.post("/api/razorpay/verify-payment/", data);
+    return res.data;
+};
+
 
 
 // Apply Coupon
 export const applyCoupon = async (data) => {
     // data: { code, cart_total }
     const res = await axiosInstance.post("/api/coupon/apply/", data);
+    return res.data;
+};
+
+// DELETE ACCOUNT
+export const deleteUser = async (id) => {
+    const res = await axiosInstance.delete(`/api/deleteuser/${id}/`);
     return res.data;
 };
 

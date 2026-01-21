@@ -3,7 +3,7 @@ import constant from "@/constants/constant";
 import { COLORS } from "@/src/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 
 
@@ -84,8 +84,7 @@ export default function Profile() {
           <View style={styles.quickActionsContainer}>
               <QuickAction icon="cube-outline" label="Orders" color="#4A90E2" onPress={() => router.push("/(tabs)/orders")} />
               <QuickAction icon="heart-outline" label="Cart" color="#E91E63" onPress={() => router.push("/(tabs)/cart")} />
-              <QuickAction icon="gift-outline" label="Coupons" color="#F5A623" onPress={() => {}} />
-              <QuickAction icon="headset-outline" label="Help" color="#7ED321" onPress={() => {}} />
+              <QuickAction icon="headset-outline" label="Help" color="#7ED321" onPress={() => Linking.openURL("https://mriigg.com/contact-us")} />
           </View>
 
           {/* Settings List */}
@@ -95,24 +94,18 @@ export default function Profile() {
               <View style={styles.menuCard}>
                   <MenuItem icon="person-outline" title="Edit Profile" onPress={() => router.push("/edit-profile")} />
                   <MenuItem icon="map-outline" title="Saved Addresses" onPress={() => router.push("/address/list")} />
-                  <MenuItem icon="language-outline" title="Select Language" onPress={() => router.push("/language/select")} />
-                  <MenuItem icon="notifications-outline" title="Notification Settings" lastItem onPress={() => {}} />
-              </View>
-          </View>
-
-           <View style={styles.section}>
-              <Text style={styles.sectionHeader}>My Activity</Text>
-              <View style={styles.menuCard}>
-                  <MenuItem icon="star-outline" title="Reviews" onPress={() => {}} />
-                  <MenuItem icon="help-circle-outline" title="Questions & Answers" lastItem onPress={() => {}} />
+                  <MenuItem icon="language-outline" title="Select Language" lastItem onPress={() => router.push("/language/select")} />
               </View>
           </View>
 
           <View style={styles.section}>
-               <Text style={styles.sectionHeader}>Feedback & Information</Text>
+               <Text style={styles.sectionHeader}>Policies & Support</Text>
                <View style={styles.menuCard}>
-                   <MenuItem icon="document-text-outline" title="Terms, Policies and Licenses" onPress={() => {}} />
-                   <MenuItem icon="help-circle-outline" title="Browse FAQs" lastItem onPress={() => {}} />
+                   <MenuItem icon="refresh-outline" title="Returns & Refunds Policy" onPress={() => Linking.openURL("https://mriigg.com/returns-refunds-policy/")} />
+                   <MenuItem icon="car-outline" title="Shipping Policy" onPress={() => Linking.openURL("https://mriigg.com/shipping-policy/")} />
+                   <MenuItem icon="document-text-outline" title="Terms & Conditions" onPress={() => Linking.openURL("https://mriigg.com/terms-conditions/")} />
+                   <MenuItem icon="shield-checkmark-outline" title="Privacy Policy" onPress={() => Linking.openURL("https://mriigg.com/privacy-policy/")} />
+                   <MenuItem icon="mail-outline" title="Contact Us" lastItem onPress={() => Linking.openURL("https://mriigg.com/contact-us/")} />
                </View>
           </View>
 

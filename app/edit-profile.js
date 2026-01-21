@@ -19,7 +19,7 @@ import {
     View,
 } from "react-native";
 import { useAuth } from "./contexts/AuthContext";
-import { updateProfile } from "./server";
+import { deleteUser, updateProfile } from "./server";
 
 
 export default function EditProfile() {
@@ -236,6 +236,48 @@ export default function EditProfile() {
                 ) : (
                     <Text style={styles.saveText}>Save Changes</Text>
                 )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+                style={[styles.saveBtn, { backgroundColor: '#FF3B30', marginTop: 16 }]} 
+                onPress={() => {
+                    Alert.alert(
+                        "Delete Account",
+                        "Are you sure you want to delete your account? This action cannot be undone.",
+                        [
+                            { text: "Cancel", style: "cancel" },
+                            { 
+                                text: "Delete", 
+                                style: "destructive", 
+                                onPress: async () => {
+                                    try {
+                                        console.log("Attempting to delete user:", user);
+                                        const userId = user?.user_id || user?.id || user?.pk;
+                                        
+                                        if (!userId) {
+                                            Alert.alert("Error", "Could not find User ID. Please restart the app and try again.");
+                                            return;
+                                        }
+
+                                        setLoading(true);
+                                        console.log("Calling deleteUser API with ID:", userId);
+                                        await deleteUser(userId);
+                                        
+                                        await updateUser(null); // Clear context
+                                        Alert.alert("Account Deleted", "Your account has been permanently deleted.");
+                                        router.replace("/(auth)/sign-in");
+                                    } catch (err) {
+                                        console.log("Delete Account Error:", err);
+                                        Alert.alert("Error", "Failed to delete account. " + (err?.message || "Please try again later."));
+                                        setLoading(false);
+                                    }
+                                }
+                            }
+                        ]
+                    );
+                }}
+            >
+                <Text style={styles.saveText}>Delete Account</Text>
             </TouchableOpacity>
 
             <View style={{ height: 100 }} />
