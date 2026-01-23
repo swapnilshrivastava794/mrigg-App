@@ -1,16 +1,15 @@
-import { globalStyles } from "@/styles/globalStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { searchProducts } from "../app/server.jsx";
@@ -76,13 +75,7 @@ export default function Header() {
           </View>
         </View>
 
-        {/* Bell */}
-        <TouchableOpacity style={globalStyles.badgeContainer}>
-          <Ionicons name="notifications-outline" size={26} color="#333" />
-          <View style={globalStyles.badge}>
-            <Text style={globalStyles.badgeNumber}>2</Text>
-          </View>
-        </TouchableOpacity>
+
       </View>
 
       {/* 🔽 WIDE SEARCH RESULT */}
@@ -199,12 +192,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#F8F9FA", // Lighter grey
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44, // Slightly taller
+    backgroundColor: "#F2F4F8", // Premium soft grey
+    borderRadius: 24, // Pill shape for modern feel
+    paddingHorizontal: 16,
+    height: 46,
     borderWidth: 1,
-    borderColor: "#Eef1f5",
+    borderColor: "transparent", // Clean look
   },
   searchInput: {
     flex: 1,
