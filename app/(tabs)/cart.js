@@ -102,7 +102,9 @@ export default function Cart() {
                           </View>
 
                           <View style={styles.info}>
-                            <Text style={styles.brand} numberOfLines={1}>{item.brand}</Text>
+                            <Text style={styles.brand} numberOfLines={1}>
+                                {typeof item.brand === 'object' ? item.brand?.name : item.brand}
+                            </Text>
                             <Text style={styles.name} numberOfLines={2}>
                               {item.name}
                             </Text>

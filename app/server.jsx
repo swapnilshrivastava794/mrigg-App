@@ -16,6 +16,11 @@ const publicEndpoints = [
   "api/auth/login/",
   "/api/auth/register/",
   "/api/auth/otp/",
+  "api/banners/",
+  "api/offers/",
+  "api/categories/",
+  "api/home/products/",
+  "api/product/",
 ];
 
 // ----------------------------------------------------------
@@ -31,60 +36,34 @@ axiosInstance.interceptors.request.use(async (config) => {
     config.url.includes(endpoint)
   );
 
+  // 🔥 DEBUG: Log token status for every request
+  console.log("📡 API Request:", config.url);
+  console.log("🔑 Token Found:", token ? "YES ✅" : "NO ❌");
+  if (token) console.log("🔑 Access Token:", token); // Log the actual token
+  console.log("🌐 Is Public Endpoint:", isPublic);
+
   if (!isPublic && token) {
     config.headers["Authorization"] = `Bearer ${token}`;
+    console.log("✅ Token Attached to Request");
+  } else if (!isPublic && !token) {
+    console.log("⚠️ WARNING: Protected endpoint but NO TOKEN found! " + config.url);
   }
 
   return config;
 });
 
 // ----------------------------------------------------------
-// RESPONSE INTERCEPTOR (Auto-Refresh Logic)
+// RESPONSE INTERCEPTOR (Simple Error Logging)
 // ----------------------------------------------------------
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
-    // IF 401 Unauthorized AND NOT already retried
-    const isLoginRequest = originalRequest.url && originalRequest.url.includes("api/auth/login");
-    
-    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = await AsyncStorage.getItem("refreshToken");
-        if (!refreshToken) {
-            // No refresh token -> Logout
-            await logoutUser();
-            return Promise.reject(error);
-        }
-
-        // Call Refresh API
-        // Adjust endpoint based on your backend: /api/token/refresh/ is common
-        const res = await axios.post(`${constant.appBaseUrl}/api/token/refresh/`, {
-            refresh: refreshToken
-        });
-
-        if (res.data.access) {
-            await saveToken(res.data.access, res.data.refresh || refreshToken);
-            
-            // Retry original request with new token
-            originalRequest.headers["Authorization"] = `Bearer ${res.data.access}`;
-            return axiosInstance(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed -> Logout
-        console.log("❌ REFRESH FAILED:", refreshError?.response?.data || refreshError.message);
-        console.log("Session expired, logging out...");
-        await logoutUser();
-        return Promise.reject(refreshError);
-      }
-    }
-
     console.log("🔥 AXIOS ERROR:", JSON.stringify(error, null, 2));
 
     if (error.response) {
+      if (error.response.status === 401) {
+          console.log("❌ Unauthenticated - Token may be expired");
+      }
       return Promise.reject(error.response.data);
     }
     if (error.request) {
@@ -130,7 +109,7 @@ export function signup(formData) {
 
 // UPDATE PROFILE → multipart/form-data
 export const updateProfile = async (formData) => {
-  const res = await axiosInstance.patch("/api/auth/update-profile/", formData, {
+  const res = await axiosInstance.put("/api/auth/update-profile/", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

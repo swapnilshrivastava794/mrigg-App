@@ -84,7 +84,19 @@ export default function SignIn() {
       }
     } catch (error) {
       console.log("LOGIN ERROR 👉", JSON.stringify(error, null, 2));
-      alert("Login failed. Please check your credentials and try again.");
+      
+      let msg = "Login failed. Please check your credentials.";
+      if (error?.response?.data?.detail) {
+          msg = error.response.data.detail;
+      } else if (error?.response?.data?.message) {
+          msg = error.response.data.message;
+      } else if (error?.detail) {
+          msg = error.detail;
+      } else if (typeof error === 'string') {
+          msg = error;
+      }
+
+      alert(msg);
     } finally {
       setLoading(false);
     }

@@ -78,8 +78,35 @@ export default function SignUp() {
 
     } catch (err) {
         console.log("SIGNUP ERROR:", err?.response?.data || err);
-        const msg = err?.response?.data?.message || err?.response?.data?.error || "Registration failed. Please try again.";
-        Alert.alert("Signup Failed", typeof msg === 'string' ? msg : JSON.stringify(msg));
+        
+        let msg = "Registration failed. Please try again.";
+        const errorData = err?.response?.data;
+
+        if (errorData) {
+            if (errorData.message) {
+                msg = errorData.message;
+            } else if (errorData.detail) {
+                msg = errorData.detail;
+            } else if (typeof errorData === 'object') {
+                // Handle field-specific errors (e.g. { "email": ["Invalid"], "password": ["Too short"] })
+                const messages = [];
+                Object.keys(errorData).forEach(key => {
+                    const val = errorData[key];
+                    if (Array.isArray(val)) {
+                        messages.push(`${key}: ${val.join(", ")}`);
+                    } else if (typeof val === 'string') {
+                        messages.push(`${key}: ${val}`);
+                    }
+                });
+                if (messages.length > 0) {
+                    msg = messages.join("\n");
+                }
+            }
+        } else if (typeof err === 'string') {
+            msg = err;
+        }
+
+        Alert.alert("Signup Failed", msg);
     } finally {
         setLoading(false);
     }

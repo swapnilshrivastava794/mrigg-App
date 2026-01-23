@@ -96,16 +96,54 @@ export default function PaymentScreen() {
       }).catch((error) => {
         // handle failure
         console.log("Razorpay Error:", error);
-        let errorMsg = 'Payment Failed';
-        if (error.code === 0 && error.description) {
-            errorMsg = error.description;
-        } else if (error.error && error.error.description) {
-            errorMsg = error.error.description;
-        }
         
+        let errorMsg = 'Payment Failed';
+        
+        // Try to parse the ugly JSON description from Razorpay
+        if (error.code === 0 && error.description) {
+            try {
+                // Check if description is a JSON string
+                const parsedError = JSON.parse(error.description);
+                if (parsedError.error) {
+                    // Extract clean message
+                    const reason = parsedError.error.reason;
+                    const desc = parsedError.error.description;
+                    const source = parsedError.error.source;
+                    const step = parsedError.error.step;
+                    
+                    if (reason === 'payment_cancelled') {
+                        errorMsg = "Payment Cancelled by user";
+                    } else if (reason === 'payment_error' && source === 'customer' && step === 'payment_authentication') {
+                         // This is often a user cancellation or simple failure during auth
+                         errorMsg = "Payment Cancelled or Failed";
+                    } else if (desc && desc !== 'undefined') {
+                        errorMsg = desc;
+                    } else if (reason) {
+                         // Formating distinct reasons like 'payment_timed_out' -> 'Payment Timed Out'
+                         errorMsg = reason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    }
+                } else {
+                    errorMsg = error.description;
+                }
+            } catch (e) {
+                // Not JSON, just use the string
+                errorMsg = error.description;
+            }
+        } else if (error.error && error.error.description) {
+             errorMsg = error.error.description;
+        }
+
         setStatus(`Payment Failed: ${errorMsg}`);
-        Alert.alert("Payment Failed", errorMsg);
-        setTimeout(() => router.back(), 3000);
+        
+        // Don't show Alert for user cancellation, just toast or silent back
+        const lowerMsg = errorMsg.toLowerCase();
+        if (lowerMsg.includes("cancelled") || (lowerMsg.includes("payment failed") && lowerMsg.length < 20)) {
+             console.log("User cancelled payment or simple failure");
+             setTimeout(() => router.back(), 2000);
+        } else {
+             Alert.alert("Payment Failed", errorMsg);
+             setTimeout(() => router.back(), 3000);
+        }
       });
 
     } catch (error) {
